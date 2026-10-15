@@ -527,8 +527,10 @@ export const SubmitView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 overflow-y-auto pb-16" onPaste={handlePaste}>
-      {/* 1. 云效配置状态条 */}
+    <div className="flex flex-col h-full bg-slate-50 overflow-hidden" onPaste={handlePaste}>
+      {/* 滚动表单内容区 */}
+      <div className="flex-1 overflow-y-auto">
+        {/* 1. 云效配置状态条 */}
       <div className="px-3 py-2 bg-white border-b border-slate-200">
         {configStatus === 'checking' && (
           <div className="flex items-center space-x-2 text-xs text-slate-500">
@@ -1079,9 +1081,11 @@ export const SubmitView: React.FC = () => {
           </div>
         )}
       </div>
+      {/* 滚动表单内容区结束 */}
+    </div>
 
-      {/* 底部固定提交操作栏 */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-xs border-t border-slate-200 z-20">
+      {/* 底部吸附提交操作栏（自然停留在 TabBar 上方，绝不遮挡） */}
+      <div className="p-3 bg-white border-t border-slate-200 shrink-0 z-10 shadow-xs">
         <button
           type="button"
           onClick={handleSubmit}

@@ -3519,559 +3519,561 @@ ${res.expected_result}`);
       setIsSubmitting(false);
     }
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-slate-50 overflow-y-auto pb-16", onPaste: handlePaste, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 py-2 bg-white border-b border-slate-200", children: [
-      configStatus === "checking" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 text-xs text-slate-500", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 13, className: "animate-spin text-blue-500" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "正在校验云效配置…" })
-      ] }),
-      configStatus === "valid" && currentUser && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5 text-emerald-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { size: 14, className: "text-emerald-500 shrink-0" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-medium truncate max-w-[200px]", children: [
-            "云效正常 · ",
-            currentUser.name || currentUser.id
-          ] })
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-slate-50 overflow-hidden", onPaste: handlePaste, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 py-2 bg-white border-b border-slate-200", children: [
+        configStatus === "checking" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 text-xs text-slate-500", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 13, className: "animate-spin text-blue-500" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "正在校验云效配置…" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] text-slate-400", children: "已就绪" })
-      ] }),
-      configStatus === "invalid" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs text-red-600", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 truncate max-w-[220px]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { size: 14, className: "shrink-0" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: configError || "配置异常" })
+        configStatus === "valid" && currentUser && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5 text-emerald-700", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { size: 14, className: "text-emerald-500 shrink-0" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-medium truncate max-w-[200px]", children: [
+              "云效正常 · ",
+              currentUser.name || currentUser.id
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] text-slate-400", children: "已就绪" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: loadInitial,
-            className: "text-blue-600 hover:underline text-[11px] shrink-0",
-            children: "重试"
-          }
-        )
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3 space-y-2 shadow-xs", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "font-semibold text-slate-800", children: "所属项目 (Project)" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
+        configStatus === "invalid" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs text-red-600", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 truncate max-w-[220px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { size: 14, className: "shrink-0" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: configError || "配置异常" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: loadInitial,
+              className: "text-blue-600 hover:underline text-[11px] shrink-0",
+              children: "重试"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3 space-y-2 shadow-xs", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "font-semibold text-slate-800", children: "所属项目 (Project)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setProjectInputMode("select"),
+                    className: `px-2 py-0.5 rounded-md font-medium transition-all ${projectInputMode === "select" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-800"}`,
+                    children: "列表选择"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setProjectInputMode("manual"),
+                    className: `px-2 py-0.5 rounded-md font-medium transition-all ${projectInputMode === "manual" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-800"}`,
+                    children: "手动输入"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
                   type: "button",
-                  onClick: () => setProjectInputMode("select"),
-                  className: `px-2 py-0.5 rounded-md font-medium transition-all ${projectInputMode === "select" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-800"}`,
-                  children: "列表选择"
+                  onClick: () => loadProjects(false),
+                  disabled: loadingProjects,
+                  className: "text-blue-600 hover:text-blue-700 flex items-center space-x-1 text-[11px] disabled:opacity-40 ml-1",
+                  title: "重新拉取组织项目",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 11, className: loadingProjects ? "animate-spin" : "" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "刷新" })
+                  ]
+                }
+              )
+            ] })
+          ] }),
+          projectInputMode === "select" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: loadingProjects ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 text-xs text-slate-400 py-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 12, className: "animate-spin text-blue-500" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "正在获取组织项目列表…" })
+          ] }) : projectOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: store.projectID,
+              onChange: (e) => handleProjectChange(e.target.value),
+              className: "w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "-- 请选择所属项目 --" }),
+                store.projectID && !projectOptions.some((p) => p.id === store.projectID) && /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: store.projectID, children: [
+                  store.projectID,
+                  " (当前手动指定项目)"
+                ] }),
+                projectOptions.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: p.id, children: [
+                  p.name || p.id,
+                  " (",
+                  p.id,
+                  ")"
+                ] }, p.id))
+              ]
+            }
+          ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-1.5 text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { size: 14, className: "shrink-0 text-amber-500 mt-0.5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 text-[11px]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-medium", children: projectError ? `获取失败: ${projectError}` : "未在组织下获取到项目" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-600 mt-0.5", children: "可直接切换到「手动输入」填写项目 ID (spaceId)。" })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setProjectInputMode("manual"),
+                className: "w-full py-1.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-medium border border-blue-200 transition-colors",
+                children: "切换到手动输入项目 ID"
+              }
+            )
+          ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  placeholder: "输入云效项目 ID / spaceId (如 64bcde...)",
+                  value: manualProjectInput,
+                  onChange: (e) => setManualProjectInput(e.target.value),
+                  onKeyDown: (e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleProjectChange(manualProjectInput);
+                    }
+                  },
+                  className: "flex-1 text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   type: "button",
-                  onClick: () => setProjectInputMode("manual"),
-                  className: `px-2 py-0.5 rounded-md font-medium transition-all ${projectInputMode === "manual" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-800"}`,
-                  children: "手动输入"
+                  onClick: () => handleProjectChange(manualProjectInput),
+                  className: "px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shrink-0 transition-colors",
+                  children: "确定"
                 }
               )
             ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-slate-400", children: "💡 项目 ID 可在云效项目页面 URL 中找到（通常为 spaceId 或 identifier）。" })
+          ] }),
+          projectSuccessMsg ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 text-[11px] text-emerald-600 font-medium", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { size: 12 }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: projectSuccessMsg })
+          ] }) : store.projectID ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-[11px] text-slate-500 pt-0.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+              "当前项目: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-700 font-medium", children: store.projectID })
+            ] }),
+            projectOptions.find((p) => p.id === store.projectID) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400 truncate max-w-[140px]", children: projectOptions.find((p) => p.id === store.projectID)?.name })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-amber-600 font-medium", children: "* 请指定所属项目，以自动拉取项目成员与必填字段" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3 space-y-1.5 shadow-xs", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "font-medium text-slate-700", children: "指派给 (负责人)" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
               {
                 type: "button",
-                onClick: () => loadProjects(false),
-                disabled: loadingProjects,
-                className: "text-blue-600 hover:text-blue-700 flex items-center space-x-1 text-[11px] disabled:opacity-40 ml-1",
-                title: "重新拉取组织项目",
+                onClick: () => loadMembers(),
+                disabled: loadingMembers || !store.projectID,
+                className: "text-blue-600 hover:text-blue-700 flex items-center space-x-1 text-[11px] disabled:opacity-40",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 11, className: loadingProjects ? "animate-spin" : "" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "刷新" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 10, className: loadingMembers ? "animate-spin" : "" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "刷新成员" })
                 ]
               }
             )
-          ] })
-        ] }),
-        projectInputMode === "select" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: loadingProjects ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 text-xs text-slate-400 py-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 12, className: "animate-spin text-blue-500" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "正在获取组织项目列表…" })
-        ] }) : projectOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "select",
-          {
-            value: store.projectID,
-            onChange: (e) => handleProjectChange(e.target.value),
-            className: "w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "-- 请选择所属项目 --" }),
-              store.projectID && !projectOptions.some((p) => p.id === store.projectID) && /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: store.projectID, children: [
-                store.projectID,
-                " (当前手动指定项目)"
-              ] }),
-              projectOptions.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: p.id, children: [
-                p.name || p.id,
-                " (",
-                p.id,
-                ")"
-              ] }, p.id))
-            ]
-          }
-        ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-1.5 text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { size: 14, className: "shrink-0 text-amber-500 mt-0.5" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 text-[11px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-medium", children: projectError ? `获取失败: ${projectError}` : "未在组织下获取到项目" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-600 mt-0.5", children: "可直接切换到「手动输入」填写项目 ID (spaceId)。" })
-            ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: () => setProjectInputMode("manual"),
-              className: "w-full py-1.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-medium border border-blue-200 transition-colors",
-              children: "切换到手动输入项目 ID"
-            }
-          )
-        ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                placeholder: "输入云效项目 ID / spaceId (如 64bcde...)",
-                value: manualProjectInput,
-                onChange: (e) => setManualProjectInput(e.target.value),
-                onKeyDown: (e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleProjectChange(manualProjectInput);
-                  }
-                },
-                className: "flex-1 text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => handleProjectChange(manualProjectInput),
-                className: "px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shrink-0 transition-colors",
-                children: "确定"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-slate-400", children: "💡 项目 ID 可在云效项目页面 URL 中找到（通常为 spaceId 或 identifier）。" })
-        ] }),
-        projectSuccessMsg ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 text-[11px] text-emerald-600 font-medium", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { size: 12 }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: projectSuccessMsg })
-        ] }) : store.projectID ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-[11px] text-slate-500 pt-0.5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
-            "当前项目: ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-700 font-medium", children: store.projectID })
-          ] }),
-          projectOptions.find((p) => p.id === store.projectID) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400 truncate max-w-[140px]", children: projectOptions.find((p) => p.id === store.projectID)?.name })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-amber-600 font-medium", children: "* 请指定所属项目，以自动拉取项目成员与必填字段" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3 space-y-1.5 shadow-xs", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "font-medium text-slate-700", children: "指派给 (负责人)" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              onClick: () => loadMembers(),
-              disabled: loadingMembers || !store.projectID,
-              className: "text-blue-600 hover:text-blue-700 flex items-center space-x-1 text-[11px] disabled:opacity-40",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 10, className: loadingMembers ? "animate-spin" : "" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "刷新成员" })
-              ]
-            }
-          )
-        ] }),
-        memberOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "select",
-          {
-            value: store.assignedTo,
-            onChange: (e) => {
-              const val = e.target.value;
-              store.setField("assignedTo", val);
-              const m = memberOptions.find((item) => item.id === val);
-              if (m) store.setField("assignedToName", m.name);
-            },
-            className: "w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "-- 请选择负责人 --" }),
-              memberOptions.map((m) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: m.id, children: [
-                m.name,
-                " (",
-                m.id,
-                ")"
-              ] }, m.id))
-            ]
-          }
-        ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "text",
-            placeholder: "负责人 ID",
-            value: store.assignedTo,
-            onChange: (e) => store.setField("assignedTo", e.target.value),
-            className: "w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3.5 space-y-3 shadow-xs", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-slate-800", children: "描述问题" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          memberOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
-              value: issueType || "",
-              onChange: (e) => setIssueType(e.target.value || null),
-              className: "text-xs py-1 px-2 bg-blue-50 text-blue-700 font-medium rounded-full border border-blue-200 focus:outline-none cursor-pointer",
+              value: store.assignedTo,
+              onChange: (e) => {
+                const val = e.target.value;
+                store.setField("assignedTo", val);
+                const m = memberOptions.find((item) => item.id === val);
+                if (m) store.setField("assignedToName", m.name);
+              },
+              className: "w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500",
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "未指定类型" }),
-                ISSUE_TYPES.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: t.id, children: t.displayName }, t.id))
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "-- 请选择负责人 --" }),
+                memberOptions.map((m) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: m.id, children: [
+                  m.name,
+                  " (",
+                  m.id,
+                  ")"
+                ] }, m.id))
               ]
+            }
+          ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              placeholder: "负责人 ID",
+              value: store.assignedTo,
+              onChange: (e) => store.setField("assignedTo", e.target.value),
+              className: "w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
             }
           )
         ] }),
-        generatedTitle && aiReportDetails ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 bg-purple-50/60 border border-purple-100 rounded-lg p-2.5 text-xs", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3.5 space-y-3 shadow-xs", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-purple-700 font-medium flex items-center space-x-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { size: 13 }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "AI 结构化摘要" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => setShowFullEditor(!showFullEditor),
-                className: "text-purple-600 hover:text-purple-800 text-[11px]",
-                children: showFullEditor ? "收起完整描述" : "展开编辑完整描述"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-slate-800 select-text", children: composedTitle }),
-          aiReportDetails.problem && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-slate-600 text-[11px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400 mr-1", children: "现象:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: aiReportDetails.problem })
-          ] })
-        ] }) : null,
-        (!generatedTitle || showFullEditor) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "textarea",
-            {
-              rows: 4,
-              placeholder: "用一句话描述你看到的问题，如：点击结算按钮后没有反应，控制台报 500 错误。",
-              value: userDescription,
-              onChange: (e) => setUserDescription(e.target.value),
-              className: "w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-sans leading-relaxed resize-y"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center text-[11px] text-slate-400", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "支持直接粘贴剪贴板截图" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              userDescription.length,
-              " 字"
-            ] })
-          ] })
-        ] }),
-        showAISettings ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-purple-50/70 border border-purple-200 rounded-lg p-2.5 space-y-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-purple-900 flex items-center space-x-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { size: 13, className: "text-purple-600" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "配置 Bug AI 服务地址" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => setShowAISettings(false),
-                className: "text-slate-400 hover:text-slate-600",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 13 })
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                placeholder: "https://bug-ai.example.com",
-                value: aiServiceInput,
-                onChange: (e) => setAiServiceInput(e.target.value),
-                onKeyDown: (e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSaveAIService();
-                  }
-                },
-                className: "flex-1 text-xs p-1.5 bg-white border border-purple-200 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: handleSaveAIService,
-                className: "px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-xs font-medium shrink-0 transition-colors",
-                children: "保存"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] text-purple-700/80", children: [
-            "服务地址保存后将持久化缓存。接口将请求 ",
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("code", { children: [
-              "{URL}",
-              "/api/v1/bug-report/generate"
-            ] }),
-            "。"
-          ] })
-        ] }) : store.aiServiceDomain ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: handleAIFormat,
-              disabled: isFormattingWithAI || !userDescription.trim(),
-              className: "w-full flex items-center justify-center space-x-1.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-medium shadow-xs disabled:opacity-40 transition-all",
-              children: isFormattingWithAI ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 13, className: "animate-spin" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "AI 正在分析整理…" })
-              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { size: 13 }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: generatedTitle ? "重新 AI 优化描述" : "AI 优化描述与步骤" })
-              ] })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-[11px] text-slate-400 mt-1 px-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate max-w-[240px]", children: [
-              "AI 服务: ",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-600", children: store.aiServiceDomain })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => {
-                  setAiServiceInput(store.aiServiceDomain);
-                  setShowAISettings(true);
-                },
-                className: "text-purple-600 hover:text-purple-700 underline text-[11px] shrink-0 ml-2",
-                children: "修改"
-              }
-            )
-          ] }),
-          aiMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-[11px] mt-1.5 ${aiFailed ? "text-red-600" : "text-slate-500"}`, children: aiMessage })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "button",
-          {
-            type: "button",
-            onClick: () => {
-              setAiServiceInput(store.aiServiceDomain);
-              setShowAISettings(true);
-            },
-            className: "w-full flex items-center justify-center space-x-1.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-dashed border-purple-300 rounded-lg text-xs font-medium transition-all",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { size: 13, className: "text-purple-600" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "配置 Bug AI 服务地址（一键智能整理）" })
-            ]
-          }
-        ) })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3.5 space-y-2.5 shadow-xs", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-slate-800", children: [
-            "证据截图 (",
-            images.length,
-            ")"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] text-slate-400", children: "点击缩略图可红框/箭头标注" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
-          images.map((item, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              className: "relative group w-20 h-20 rounded-lg border border-slate-200 overflow-hidden bg-slate-100 shrink-0 cursor-pointer",
-              onClick: () => setActiveAnnotateItem(item),
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: item.dataUrl, alt: "截图", className: "w-full h-full object-cover" }),
-                item.annotations.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute bottom-1 right-1 px-1 py-0.2 bg-red-600 text-white text-[9px] rounded font-medium", children: [
-                  "已标注 (",
-                  item.annotations.length,
-                  ")"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      setImages((prev) => prev.filter((img) => img.id !== item.id));
-                    },
-                    className: "absolute top-1 right-1 p-0.5 bg-slate-900/70 hover:bg-red-600 text-white rounded-full transition-colors opacity-90 group-hover:opacity-100",
-                    title: "删除截图",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 12 })
-                  }
-                )
-              ]
-            },
-            item.id
-          )),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1.5 justify-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-slate-800", children: "描述问题" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
+              "select",
               {
-                type: "button",
-                onClick: captureCurrentTab,
-                disabled: isCapturing,
-                className: "flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors",
-                title: "截取当前网页可视区域",
+                value: issueType || "",
+                onChange: (e) => setIssueType(e.target.value || null),
+                className: "text-xs py-1 px-2 bg-blue-50 text-blue-700 font-medium rounded-full border border-blue-200 focus:outline-none cursor-pointer",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(Camera, { size: 13, className: isCapturing ? "animate-pulse text-blue-600" : "" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "截取当前网页" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "未指定类型" }),
+                  ISSUE_TYPES.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: t.id, children: t.displayName }, t.id))
                 ]
               }
+            )
+          ] }),
+          generatedTitle && aiReportDetails ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 bg-purple-50/60 border border-purple-100 rounded-lg p-2.5 text-xs", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-purple-700 font-medium flex items-center space-x-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { size: 13 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "AI 结构化摘要" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setShowFullEditor(!showFullEditor),
+                  className: "text-purple-600 hover:text-purple-800 text-[11px]",
+                  children: showFullEditor ? "收起完整描述" : "展开编辑完整描述"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-slate-800 select-text", children: composedTitle }),
+            aiReportDetails.problem && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-slate-600 text-[11px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400 mr-1", children: "现象:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: aiReportDetails.problem })
+            ] })
+          ] }) : null,
+          (!generatedTitle || showFullEditor) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                rows: 4,
+                placeholder: "用一句话描述你看到的问题，如：点击结算按钮后没有反应，控制台报 500 错误。",
+                value: userDescription,
+                onChange: (e) => setUserDescription(e.target.value),
+                className: "w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-sans leading-relaxed resize-y"
+              }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors cursor-pointer", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(FileUp, { size: 13 }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "上传本地图片" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center text-[11px] text-slate-400", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "支持直接粘贴剪贴板截图" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                userDescription.length,
+                " 字"
+              ] })
+            ] })
+          ] }),
+          showAISettings ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-purple-50/70 border border-purple-200 rounded-lg p-2.5 space-y-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-purple-900 flex items-center space-x-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { size: 13, className: "text-purple-600" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "配置 Bug AI 服务地址" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setShowAISettings(false),
+                  className: "text-slate-400 hover:text-slate-600",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 13 })
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-1.5", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
-                  type: "file",
-                  accept: "image/*",
-                  multiple: true,
-                  onChange: handleFileUpload,
-                  className: "hidden"
+                  type: "text",
+                  placeholder: "https://bug-ai.example.com",
+                  value: aiServiceInput,
+                  onChange: (e) => setAiServiceInput(e.target.value),
+                  onKeyDown: (e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSaveAIService();
+                    }
+                  },
+                  className: "flex-1 text-xs p-1.5 bg-white border border-purple-200 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: handleSaveAIService,
+                  className: "px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-xs font-medium shrink-0 transition-colors",
+                  children: "保存"
                 }
               )
-            ] })
-          ] })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "button",
-          {
-            type: "button",
-            onClick: () => setShowSupplementary(!showSupplementary),
-            className: "w-full flex items-center justify-between p-3.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "补充信息" }),
-                requiredListFields.length > 0 && !requiredFieldsFilled && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-2 h-2 rounded-full bg-red-500" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] text-purple-700/80", children: [
+              "服务地址保存后将持久化缓存。接口将请求 ",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("code", { children: [
+                "{URL}",
+                "/api/v1/bug-report/generate"
               ] }),
-              showSupplementary ? /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronDown, { size: 15 }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronRight, { size: 15 })
-            ]
-          }
-        ),
-        showSupplementary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3.5 pt-0 space-y-3.5 border-t border-slate-100 text-xs", children: [
-          requiredListFields.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 pt-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-medium text-slate-700", children: "云效必填字段" }),
-            requiredListFields.map((field) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-              ChipGroup,
-              {
-                title: field.name,
-                options: field.options.map((o) => ({ id: o.id, displayName: o.displayValue || o.value })),
-                value: customFieldValues[field.id],
-                onChange: (val) => setCustomFieldValues((prev) => ({ ...prev, [field.id]: val || "" }))
-              },
-              field.id
-            ))
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 pt-1", children: [
-            !hasCloudSeverityField && /* @__PURE__ */ jsxRuntimeExports.jsx(
-              ChipGroup,
-              {
-                title: "严重程度",
-                options: SEVERITIES,
-                value: severity,
-                onChange: setSeverity
-              }
-            ),
+              "。"
+            ] })
+          ] }) : store.aiServiceDomain ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              ChipGroup,
-              {
-                title: "发生频率",
-                options: FREQUENCIES,
-                value: frequency,
-                onChange: setFrequency
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-2 border-t border-slate-100", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
               {
                 type: "button",
-                onClick: () => setShowEnvDisclosure(!showEnvDisclosure),
-                className: "flex items-center space-x-1 text-slate-500 hover:text-slate-800 text-[11px] font-medium",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(Info, { size: 12 }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                    "自动采集环境信息 (",
-                    snapshot?.recentRequests.length || 0,
-                    " 条网络轨迹)"
-                  ] })
-                ]
+                onClick: handleAIFormat,
+                disabled: isFormattingWithAI || !userDescription.trim(),
+                className: "w-full flex items-center justify-center space-x-1.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-medium shadow-xs disabled:opacity-40 transition-all",
+                children: isFormattingWithAI ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 13, className: "animate-spin" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "AI 正在分析整理…" })
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { size: 13 }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: generatedTitle ? "重新 AI 优化描述" : "AI 优化描述与步骤" })
+                ] })
               }
             ),
-            showEnvDisclosure && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-2 bg-slate-50 rounded-lg text-[11px] text-slate-600 font-mono space-y-1 select-text", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                "页面: ",
-                snapshot?.pageTitle || "-"
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-[11px] text-slate-400 mt-1 px-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate max-w-[240px]", children: [
+                "AI 服务: ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-600", children: store.aiServiceDomain })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate", children: [
-                "URL: ",
-                snapshot?.pageURL || "-"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                "浏览器: ",
-                snapshot?.browserInfo || "-"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                "网络: ",
-                snapshot?.networkStatus || "-"
-              ] }),
-              snapshot?.recentRequests && snapshot.recentRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-1 mt-1 border-t border-slate-200", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-slate-700", children: "最近网络请求 (前 5 条):" }),
-                snapshot.recentRequests.slice(0, 5).map((r, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate", children: [
-                  r.method,
-                  " ",
-                  r.path.slice(0, 35),
-                  " · ",
-                  r.statusCode || "ERR",
-                  " · ",
-                  r.durationMs,
-                  "ms"
-                ] }, idx))
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => {
+                    setAiServiceInput(store.aiServiceDomain);
+                    setShowAISettings(true);
+                  },
+                  className: "text-purple-600 hover:text-purple-700 underline text-[11px] shrink-0 ml-2",
+                  children: "修改"
+                }
+              )
+            ] }),
+            aiMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-[11px] mt-1.5 ${aiFailed ? "text-red-600" : "text-slate-500"}`, children: aiMessage })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                setAiServiceInput(store.aiServiceDomain);
+                setShowAISettings(true);
+              },
+              className: "w-full flex items-center justify-center space-x-1.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-dashed border-purple-300 rounded-lg text-xs font-medium transition-all",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { size: 13, className: "text-purple-600" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "配置 Bug AI 服务地址（一键智能整理）" })
+              ]
+            }
+          ) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3.5 space-y-2.5 shadow-xs", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-slate-800", children: [
+              "证据截图 (",
+              images.length,
+              ")"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] text-slate-400", children: "点击缩略图可红框/箭头标注" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
+            images.map((item, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "relative group w-20 h-20 rounded-lg border border-slate-200 overflow-hidden bg-slate-100 shrink-0 cursor-pointer",
+                onClick: () => setActiveAnnotateItem(item),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: item.dataUrl, alt: "截图", className: "w-full h-full object-cover" }),
+                  item.annotations.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute bottom-1 right-1 px-1 py-0.2 bg-red-600 text-white text-[9px] rounded font-medium", children: [
+                    "已标注 (",
+                    item.annotations.length,
+                    ")"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        setImages((prev) => prev.filter((img) => img.id !== item.id));
+                      },
+                      className: "absolute top-1 right-1 p-0.5 bg-slate-900/70 hover:bg-red-600 text-white rounded-full transition-colors opacity-90 group-hover:opacity-100",
+                      title: "删除截图",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 12 })
+                    }
+                  )
+                ]
+              },
+              item.id
+            )),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1.5 justify-center", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: captureCurrentTab,
+                  disabled: isCapturing,
+                  className: "flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors",
+                  title: "截取当前网页可视区域",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Camera, { size: 13, className: isCapturing ? "animate-pulse text-blue-600" : "" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "截取当前网页" })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors cursor-pointer", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(FileUp, { size: 13 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "上传本地图片" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "file",
+                    accept: "image/*",
+                    multiple: true,
+                    onChange: handleFileUpload,
+                    className: "hidden"
+                  }
+                )
               ] })
             ] })
           ] })
-        ] })
-      ] }),
-      submitResult && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "div",
-        {
-          className: `p-3 rounded-xl border text-xs space-y-1 ${submitResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"}`,
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5 font-semibold", children: [
-              submitResult.success ? /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { size: 16 }) : /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { size: 16 }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: submitResult.message })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => setShowSupplementary(!showSupplementary),
+              className: "w-full flex items-center justify-between p-3.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "补充信息" }),
+                  requiredListFields.length > 0 && !requiredFieldsFilled && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-2 h-2 rounded-full bg-red-500" })
+                ] }),
+                showSupplementary ? /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronDown, { size: 15 }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronRight, { size: 15 })
+              ]
+            }
+          ),
+          showSupplementary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3.5 pt-0 space-y-3.5 border-t border-slate-100 text-xs", children: [
+            requiredListFields.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 pt-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-medium text-slate-700", children: "云效必填字段" }),
+              requiredListFields.map((field) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                ChipGroup,
+                {
+                  title: field.name,
+                  options: field.options.map((o) => ({ id: o.id, displayName: o.displayValue || o.value })),
+                  value: customFieldValues[field.id],
+                  onChange: (val) => setCustomFieldValues((prev) => ({ ...prev, [field.id]: val || "" }))
+                },
+                field.id
+              ))
             ] }),
-            submitResult.details && submitResult.details.failedAttachments.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-red-600 pl-5", children: [
-              "失败附件: ",
-              submitResult.details.failedAttachments.map((f) => f.fileName).join(", ")
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 pt-1", children: [
+              !hasCloudSeverityField && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                ChipGroup,
+                {
+                  title: "严重程度",
+                  options: SEVERITIES,
+                  value: severity,
+                  onChange: setSeverity
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                ChipGroup,
+                {
+                  title: "发生频率",
+                  options: FREQUENCIES,
+                  value: frequency,
+                  onChange: setFrequency
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-2 border-t border-slate-100", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setShowEnvDisclosure(!showEnvDisclosure),
+                  className: "flex items-center space-x-1 text-slate-500 hover:text-slate-800 text-[11px] font-medium",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Info, { size: 12 }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                      "自动采集环境信息 (",
+                      snapshot?.recentRequests.length || 0,
+                      " 条网络轨迹)"
+                    ] })
+                  ]
+                }
+              ),
+              showEnvDisclosure && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-2 bg-slate-50 rounded-lg text-[11px] text-slate-600 font-mono space-y-1 select-text", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  "页面: ",
+                  snapshot?.pageTitle || "-"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate", children: [
+                  "URL: ",
+                  snapshot?.pageURL || "-"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  "浏览器: ",
+                  snapshot?.browserInfo || "-"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  "网络: ",
+                  snapshot?.networkStatus || "-"
+                ] }),
+                snapshot?.recentRequests && snapshot.recentRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-1 mt-1 border-t border-slate-200", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-slate-700", children: "最近网络请求 (前 5 条):" }),
+                  snapshot.recentRequests.slice(0, 5).map((r, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate", children: [
+                    r.method,
+                    " ",
+                    r.path.slice(0, 35),
+                    " · ",
+                    r.statusCode || "ERR",
+                    " · ",
+                    r.durationMs,
+                    "ms"
+                  ] }, idx))
+                ] })
+              ] })
             ] })
-          ]
-        }
-      )
+          ] })
+        ] }),
+        submitResult && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: `p-3 rounded-xl border text-xs space-y-1 ${submitResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5 font-semibold", children: [
+                submitResult.success ? /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { size: 16 }) : /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { size: 16 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: submitResult.message })
+              ] }),
+              submitResult.details && submitResult.details.failedAttachments.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-red-600 pl-5", children: [
+                "失败附件: ",
+                submitResult.details.failedAttachments.map((f) => f.fileName).join(", ")
+              ] })
+            ]
+          }
+        )
+      ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-xs border-t border-slate-200 z-20", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 bg-white border-t border-slate-200 shrink-0 z-10 shadow-xs", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
         type: "button",
