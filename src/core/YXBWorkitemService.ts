@@ -355,13 +355,13 @@ export class YXBWorkitemService {
     alternativeValue?: string,
   ): Promise<void> {
     const doPut = async (val: string) => {
-      // 官方标准：body 包含 {"status": statusId}，同时兼容带 statusId 字段的服务端解析
+      // 官方标准：body 格式为 {"status": statusId}，云效严格校验字段名，不可包含多余字段
       await this.client.sendNoContent(
         this.config,
         { kind: 'updateWorkitem', workitemId },
         'PUT',
         token,
-        { status: val, statusId: val },
+        { status: val },
       );
     };
 

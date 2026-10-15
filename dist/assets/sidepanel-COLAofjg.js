@@ -1639,7 +1639,7 @@ class YXBWorkitemService {
         { kind: "updateWorkitem", workitemId },
         "PUT",
         token,
-        { status: val, statusId: val }
+        { status: val }
       );
     };
     try {
