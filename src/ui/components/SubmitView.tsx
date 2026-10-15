@@ -413,6 +413,13 @@ export const SubmitView: React.FC = () => {
     f => f.required && (f.format === 'list' || f.format === 'multiList') && f.options.length > 0,
   );
 
+  // 检查云效必填字段中是否已有「严重程度 / 优先级」类字段
+  // 若已有，说明该项目工作项类型自带官方字段（如 1-致命、2-严重…），不应再重复渲染客户端预设的「严重程度」胶囊
+  const hasCloudSeverityField = requiredListFields.some(f => {
+    const n = f.name.toLowerCase();
+    return n.includes('severity') || n.includes('严重') || n.includes('优先级') || n.includes('priority');
+  });
+
   const requiredFieldsFilled = requiredListFields.every(
     f => !!customFieldValues[f.id] && customFieldValues[f.id].trim() !== '',
   );
@@ -473,8 +480,10 @@ export const SubmitView: React.FC = () => {
       const labels: string[] = [];
       const it = ISSUE_TYPES.find(t => t.id === issueType);
       if (it) labels.push(it.label);
-      const sev = SEVERITIES.find(s => s.id === severity);
-      if (sev) labels.push(sev.label);
+      if (!hasCloudSeverityField) {
+        const sev = SEVERITIES.find(s => s.id === severity);
+        if (sev) labels.push(sev.label);
+      }
       const freq = FREQUENCIES.find(f => f.id === frequency);
       if (freq) labels.push(freq.label);
 
@@ -999,12 +1008,14 @@ export const SubmitView: React.FC = () => {
 
               {/* 严重程度 & 发生频率 */}
               <div className="space-y-2 pt-1">
-                <ChipGroup
-                  title="严重程度"
-                  options={SEVERITIES}
-                  value={severity}
-                  onChange={setSeverity}
-                />
+                {!hasCloudSeverityField && (
+                  <ChipGroup
+                    title="严重程度"
+                    options={SEVERITIES}
+                    value={severity}
+                    onChange={setSeverity}
+                  />
+                )}
                 <ChipGroup
                   title="发生频率"
                   options={FREQUENCIES}

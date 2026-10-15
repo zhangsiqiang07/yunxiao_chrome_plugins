@@ -3428,6 +3428,10 @@ ${res.expected_result}`);
   const requiredListFields = fieldDefinitions.filter(
     (f) => f.required && (f.format === "list" || f.format === "multiList") && f.options.length > 0
   );
+  const hasCloudSeverityField = requiredListFields.some((f) => {
+    const n = f.name.toLowerCase();
+    return n.includes("severity") || n.includes("严重") || n.includes("优先级") || n.includes("priority");
+  });
   const requiredFieldsFilled = requiredListFields.every(
     (f) => !!customFieldValues[f.id] && customFieldValues[f.id].trim() !== ""
   );
@@ -3478,8 +3482,10 @@ ${res.expected_result}`);
       const labels = [];
       const it = ISSUE_TYPES.find((t) => t.id === issueType);
       if (it) labels.push(it.label);
-      const sev = SEVERITIES.find((s) => s.id === severity);
-      if (sev) labels.push(sev.label);
+      if (!hasCloudSeverityField) {
+        const sev = SEVERITIES.find((s) => s.id === severity);
+        if (sev) labels.push(sev.label);
+      }
       const freq = FREQUENCIES.find((f) => f.id === frequency);
       if (freq) labels.push(freq.label);
       const reporter = new YunxiaoBugReporter(store.buildConfiguration());
@@ -3978,7 +3984,7 @@ ${res.expected_result}`);
             ))
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 pt-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
+            !hasCloudSeverityField && /* @__PURE__ */ jsxRuntimeExports.jsx(
               ChipGroup,
               {
                 title: "严重程度",
