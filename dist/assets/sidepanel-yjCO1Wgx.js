@@ -1973,8 +1973,26 @@ const useConfigStore = create((set, get) => ({
 
 function parseDescription(description) {
   if (!description) return { text: "", imageURLs: [] };
+  if (typeof description === "object") {
+    const obj = description;
+    if (obj.jsonMLValue) {
+      return {
+        text: cleanText(extractText(obj.jsonMLValue)),
+        imageURLs: extractImageURLs(obj.jsonMLValue)
+      };
+    }
+    if (typeof obj.htmlValue === "string") return parseHTMLLike(obj.htmlValue);
+    if (typeof obj.value === "string") return parseHTMLLike(obj.value);
+    if (typeof obj.text === "string") return parseHTMLLike(obj.text);
+    try {
+      return parseHTMLLike(JSON.stringify(obj));
+    } catch {
+      return { text: "", imageURLs: [] };
+    }
+  }
+  const str = String(description);
   try {
-    const json = JSON.parse(description);
+    const json = JSON.parse(str);
     if (json && typeof json === "object") {
       if (json.jsonMLValue) {
         return {
@@ -1982,11 +2000,13 @@ function parseDescription(description) {
           imageURLs: extractImageURLs(json.jsonMLValue)
         };
       }
-      if (json.htmlValue) return parseHTMLLike(json.htmlValue);
+      if (typeof json.htmlValue === "string") return parseHTMLLike(json.htmlValue);
+      if (typeof json.value === "string") return parseHTMLLike(json.value);
+      if (typeof json.text === "string") return parseHTMLLike(json.text);
     }
   } catch {
   }
-  return parseHTMLLike(description);
+  return parseHTMLLike(str);
 }
 function extractText(value) {
   if (typeof value === "string") return value === "/" ? "" : value;
@@ -2014,13 +2034,14 @@ function extractImageURLs(value) {
   return urls;
 }
 function parseHTMLLike(text) {
+  const str = typeof text === "string" ? text : String(text ?? "");
   const urls = [];
   const htmlRe = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
   let m;
-  while (m = htmlRe.exec(text)) urls.push(m[1]);
+  while (m = htmlRe.exec(str)) urls.push(m[1]);
   const mdRe = /!\[[^\]]*\]\(([^)]+)\)/g;
-  while (m = mdRe.exec(text)) urls.push(m[1]);
-  let body = text;
+  while (m = mdRe.exec(str)) urls.push(m[1]);
+  let body = str;
   body = body.replace(/<img\b[^>]*>/gi, "");
   body = body.replace(/!\[[^\]]*\]\([^)]+\)/g, "");
   body = body.replace(/<[^>]+>/g, "");
@@ -2121,18 +2142,19 @@ const AuthImageView = ({
 
 const BugDetailView = ({ item, onBack }) => {
   const store = useConfigStore();
-  const [detail, setDetail] = reactExports.useState(item);
+  const [detail, setDetail] = reactExports.useState(item || { id: "", subject: "" });
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
   const reporter = new YunxiaoBugReporter(store.buildConfigurationForProjectListing());
   reactExports.useEffect(() => {
     let active = true;
+    if (!item?.id) return;
     const fetchDetail = async () => {
       setLoading(true);
       setError(null);
       try {
         const fetched = await reporter.getWorkitem(item.id);
-        if (active) setDetail(fetched);
+        if (active && fetched) setDetail(fetched);
       } catch (err) {
         if (active) setError(err.message || "加载详情失败");
       } finally {
@@ -2143,9 +2165,11 @@ const BugDetailView = ({ item, onBack }) => {
     return () => {
       active = false;
     };
-  }, [item.id]);
+  }, [item?.id]);
   const openInYunxiao = () => {
-    const url = `https://devops.aliyun.com/projex/project/${store.projectID}/workitem/${detail.id}`;
+    const proj = store.projectID || detail.spaceName || "";
+    const wid = detail.id || item?.id || "";
+    const url = `https://devops.aliyun.com/projex/project/${proj}/workitem/${wid}`;
     chrome.tabs.create({ url });
   };
   const formatDate = (ms) => {
@@ -2153,7 +2177,7 @@ const BugDetailView = ({ item, onBack }) => {
     const d = new Date(ms);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
-  const parsedDesc = parseDescription(detail.description);
+  const parsedDesc = parseDescription(detail?.description);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-slate-50 overflow-y-auto pb-10", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sticky top-0 z-10 flex items-center justify-between px-3 py-2.5 bg-white border-b border-slate-200", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -2272,6 +2296,8 @@ const BugListView = () => {
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
   const [projectOptions, setProjectOptions] = reactExports.useState([]);
   const [loadingProjects, setLoadingProjects] = reactExports.useState(false);
+  const [isEditingProject, setIsEditingProject] = reactExports.useState(false);
+  const [manualProjectInput, setManualProjectInput] = reactExports.useState(store.projectID);
   const reporter = new YunxiaoBugReporter(store.buildConfigurationForProjectListing());
   const loadProjects = async () => {
     setLoadingProjects(true);
@@ -2323,18 +2349,16 @@ const BugListView = () => {
     const d = new Date(ms);
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
-  if (selectedItem) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(BugDetailView, { item: selectedItem, onBack: () => setSelectedItem(null) });
-  }
-  projectOptions.find((p) => p.id === store.projectID)?.name || store.projectID || "选择项目";
-  const [isEditingProject, setIsEditingProject] = reactExports.useState(false);
-  const [manualProjectInput, setManualProjectInput] = reactExports.useState(store.projectID);
   const handleApplyManualProject = () => {
     const val = manualProjectInput.trim();
     store.setField("projectID", val);
     store.save();
     setIsEditingProject(false);
   };
+  if (selectedItem) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(BugDetailView, { item: selectedItem, onBack: () => setSelectedItem(null) });
+  }
+  projectOptions.find((p) => p.id === store.projectID)?.name || store.projectID || "选择项目";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-slate-50 overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-white border-b border-slate-200", children: [
       isEditingProject ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 flex-1 mr-2", children: [

@@ -13,7 +13,7 @@ interface BugDetailViewProps {
 
 export const BugDetailView: React.FC<BugDetailViewProps> = ({ item, onBack }) => {
   const store = useConfigStore();
-  const [detail, setDetail] = useState<YXBWorkitem>(item);
+  const [detail, setDetail] = useState<YXBWorkitem>(item || { id: '', subject: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,12 +21,14 @@ export const BugDetailView: React.FC<BugDetailViewProps> = ({ item, onBack }) =>
 
   useEffect(() => {
     let active = true;
+    if (!item?.id) return;
+
     const fetchDetail = async () => {
       setLoading(true);
       setError(null);
       try {
         const fetched = await reporter.getWorkitem(item.id);
-        if (active) setDetail(fetched);
+        if (active && fetched) setDetail(fetched);
       } catch (err: any) {
         if (active) setError(err.message || '加载详情失败');
       } finally {
@@ -35,11 +37,13 @@ export const BugDetailView: React.FC<BugDetailViewProps> = ({ item, onBack }) =>
     };
     fetchDetail();
     return () => { active = false; };
-  }, [item.id]);
+  }, [item?.id]);
 
   const openInYunxiao = () => {
     // 构造云效工作项链接
-    const url = `https://devops.aliyun.com/projex/project/${store.projectID}/workitem/${detail.id}`;
+    const proj = store.projectID || detail.spaceName || '';
+    const wid = detail.id || item?.id || '';
+    const url = `https://devops.aliyun.com/projex/project/${proj}/workitem/${wid}`;
     chrome.tabs.create({ url });
   };
 
@@ -49,7 +53,7 @@ export const BugDetailView: React.FC<BugDetailViewProps> = ({ item, onBack }) =>
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
-  const parsedDesc = parseDescription(detail.description);
+  const parsedDesc = parseDescription(detail?.description);
 
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-y-auto pb-10">

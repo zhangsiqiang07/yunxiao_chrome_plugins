@@ -4,12 +4,32 @@
  */
 export interface ParsedDescription { text: string; imageURLs: string[]; }
 
-export function parseDescription(description?: string | null): ParsedDescription {
+export function parseDescription(description?: unknown): ParsedDescription {
   if (!description) return { text: '', imageURLs: [] };
+
+  if (typeof description === 'object') {
+    const obj = description as Record<string, unknown>;
+    if (obj.jsonMLValue) {
+      return {
+        text: cleanText(extractText(obj.jsonMLValue)),
+        imageURLs: extractImageURLs(obj.jsonMLValue),
+      };
+    }
+    if (typeof obj.htmlValue === 'string') return parseHTMLLike(obj.htmlValue);
+    if (typeof obj.value === 'string') return parseHTMLLike(obj.value);
+    if (typeof obj.text === 'string') return parseHTMLLike(obj.text);
+    try {
+      return parseHTMLLike(JSON.stringify(obj));
+    } catch {
+      return { text: '', imageURLs: [] };
+    }
+  }
+
+  const str = String(description);
 
   // 1) JSON 结构化
   try {
-    const json = JSON.parse(description);
+    const json = JSON.parse(str);
     if (json && typeof json === 'object') {
       if (json.jsonMLValue) {
         return {
@@ -17,12 +37,14 @@ export function parseDescription(description?: string | null): ParsedDescription
           imageURLs: extractImageURLs(json.jsonMLValue),
         };
       }
-      if (json.htmlValue) return parseHTMLLike(json.htmlValue);
+      if (typeof json.htmlValue === 'string') return parseHTMLLike(json.htmlValue);
+      if (typeof json.value === 'string') return parseHTMLLike(json.value);
+      if (typeof json.text === 'string') return parseHTMLLike(json.text);
     }
   } catch { /* not JSON */ }
 
   // 2) HTML / Markdown
-  return parseHTMLLike(description);
+  return parseHTMLLike(str);
 }
 
 function extractText(value: unknown): string {
@@ -55,17 +77,18 @@ function extractImageURLs(value: unknown): string[] {
   return urls;
 }
 
-function parseHTMLLike(text: string): ParsedDescription {
+function parseHTMLLike(text: unknown): ParsedDescription {
+  const str = typeof text === 'string' ? text : String(text ?? '');
   const urls: string[] = [];
   // HTML img src
   const htmlRe = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
   let m: RegExpExecArray | null;
-  while ((m = htmlRe.exec(text))) urls.push(m[1]);
+  while ((m = htmlRe.exec(str))) urls.push(m[1]);
   // Markdown ![](url)
   const mdRe = /!\[[^\]]*\]\(([^)]+)\)/g;
-  while ((m = mdRe.exec(text))) urls.push(m[1]);
+  while ((m = mdRe.exec(str))) urls.push(m[1]);
 
-  let body = text;
+  let body = str;
   body = body.replace(/<img\b[^>]*>/gi, '');
   body = body.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
   body = body.replace(/<[^>]+>/g, '');

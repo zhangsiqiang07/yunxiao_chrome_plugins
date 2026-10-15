@@ -20,6 +20,8 @@ export const BugListView: React.FC = () => {
   // 项目切换
   const [projectOptions, setProjectOptions] = useState<YXBProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [isEditingProject, setIsEditingProject] = useState(false);
+  const [manualProjectInput, setManualProjectInput] = useState(store.projectID);
 
   const reporter = new YunxiaoBugReporter(store.buildConfigurationForProjectListing());
 
@@ -81,21 +83,18 @@ export const BugListView: React.FC = () => {
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
-  if (selectedItem) {
-    return <BugDetailView item={selectedItem} onBack={() => setSelectedItem(null)} />;
-  }
-
-  const currentProjectName = projectOptions.find(p => p.id === store.projectID)?.name || store.projectID || '选择项目';
-
-  const [isEditingProject, setIsEditingProject] = useState(false);
-  const [manualProjectInput, setManualProjectInput] = useState(store.projectID);
-
   const handleApplyManualProject = () => {
     const val = manualProjectInput.trim();
     store.setField('projectID', val);
     store.save();
     setIsEditingProject(false);
   };
+
+  if (selectedItem) {
+    return <BugDetailView item={selectedItem} onBack={() => setSelectedItem(null)} />;
+  }
+
+  const currentProjectName = projectOptions.find(p => p.id === store.projectID)?.name || store.projectID || '选择项目';
 
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
