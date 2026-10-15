@@ -85,6 +85,8 @@ export const SubmitView: React.FC = () => {
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [aiFailed, setAiFailed] = useState(false);
   const [showFullEditor, setShowFullEditor] = useState(false);
+  const [showAISettings, setShowAISettings] = useState(false);
+  const [aiServiceInput, setAiServiceInput] = useState(store.aiServiceDomain);
 
   // 5. 截图与标注
   const [images, setImages] = useState<ScreenshotItem[]>([]);
@@ -320,9 +322,24 @@ export const SubmitView: React.FC = () => {
     });
   }, []);
 
+  useEffect(() => {
+    setAiServiceInput(store.aiServiceDomain);
+  }, [store.aiServiceDomain]);
+
+  const handleSaveAIService = async () => {
+    const val = aiServiceInput.trim();
+    store.setField('aiServiceDomain', val);
+    await store.save();
+    setShowAISettings(false);
+  };
+
   // AI 智能整理
   const handleAIFormat = async () => {
-    if (!userDescription.trim() || !store.aiServiceDomain) return;
+    if (!userDescription.trim()) return;
+    if (!store.aiServiceDomain) {
+      setShowAISettings(true);
+      return;
+    }
     setIsFormattingWithAI(true);
     setAiMessage(null);
     setAiFailed(false);
@@ -784,8 +801,49 @@ export const SubmitView: React.FC = () => {
             </div>
           )}
 
-          {/* AI 整理按钮 */}
-          {store.aiServiceDomain && (
+          {/* AI 整理区域 */}
+          {showAISettings ? (
+            <div className="bg-purple-50/70 border border-purple-200 rounded-lg p-2.5 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-purple-900 flex items-center space-x-1">
+                  <Sparkles size={13} className="text-purple-600" />
+                  <span>配置 Bug AI 服务地址</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAISettings(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+              <div className="flex space-x-1.5">
+                <input
+                  type="text"
+                  placeholder="https://bug-ai.example.com"
+                  value={aiServiceInput}
+                  onChange={(e) => setAiServiceInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveAIService();
+                    }
+                  }}
+                  className="flex-1 text-xs p-1.5 bg-white border border-purple-200 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveAIService}
+                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-xs font-medium shrink-0 transition-colors"
+                >
+                  保存
+                </button>
+              </div>
+              <p className="text-[10px] text-purple-700/80">
+                服务地址保存后将持久化缓存。接口将请求 <code>{'{URL}'}/api/v1/bug-report/generate</code>。
+              </p>
+            </div>
+          ) : store.aiServiceDomain ? (
             <div className="pt-1">
               <button
                 type="button"
@@ -805,11 +863,40 @@ export const SubmitView: React.FC = () => {
                   </>
                 )}
               </button>
+              <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1 px-1">
+                <span className="truncate max-w-[240px]">
+                  AI 服务: <span className="font-mono text-slate-600">{store.aiServiceDomain}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiServiceInput(store.aiServiceDomain);
+                    setShowAISettings(true);
+                  }}
+                  className="text-purple-600 hover:text-purple-700 underline text-[11px] shrink-0 ml-2"
+                >
+                  修改
+                </button>
+              </div>
               {aiMessage && (
                 <p className={`text-[11px] mt-1.5 ${aiFailed ? 'text-red-600' : 'text-slate-500'}`}>
                   {aiMessage}
                 </p>
               )}
+            </div>
+          ) : (
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setAiServiceInput(store.aiServiceDomain);
+                  setShowAISettings(true);
+                }}
+                className="w-full flex items-center justify-center space-x-1.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-dashed border-purple-300 rounded-lg text-xs font-medium transition-all"
+              >
+                <Sparkles size={13} className="text-purple-600" />
+                <span>配置 Bug AI 服务地址（一键智能整理）</span>
+              </button>
             </div>
           )}
         </div>

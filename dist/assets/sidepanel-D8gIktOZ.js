@@ -1870,6 +1870,8 @@ const useConfigStore = create((set, get) => ({
       const saved = data[STORAGE_KEY];
       if (saved && typeof saved === "object") {
         set({
+          domain: saved.domain || DEMO_DOMAIN,
+          aiServiceDomain: saved.aiServiceDomain || "",
           organizationID: saved.organizationID !== void 0 ? saved.organizationID : DEMO_ORGANIZATION_ID,
           edition: saved.edition || "standard",
           projectID: saved.projectID || "",
@@ -1892,17 +1894,19 @@ const useConfigStore = create((set, get) => ({
   save: async () => {
     const state = get();
     const toSave = {
+      domain: state.domain.trim(),
+      aiServiceDomain: state.aiServiceDomain.trim(),
       organizationID: state.organizationID.trim(),
       edition: state.edition,
-      projectID: state.projectID,
-      assignedTo: state.assignedTo,
-      assignedToName: state.assignedToName,
-      workitemTypeID: state.workitemTypeID,
+      projectID: state.projectID.trim(),
+      assignedTo: state.assignedTo.trim(),
+      assignedToName: state.assignedToName.trim(),
+      workitemTypeID: state.workitemTypeID.trim(),
       cacheEnabled: state.cacheEnabled,
       cacheBackend: state.cacheBackend,
       workitemTypeCacheTTL: state.workitemTypeCacheTTL,
       tokenCacheTTL: state.tokenCacheTTL,
-      token: state.token
+      token: state.token.trim()
     };
     try {
       await chrome.storage.local.set({ [STORAGE_KEY]: toSave });
@@ -3145,6 +3149,8 @@ const SubmitView = () => {
   const [aiMessage, setAiMessage] = reactExports.useState(null);
   const [aiFailed, setAiFailed] = reactExports.useState(false);
   const [showFullEditor, setShowFullEditor] = reactExports.useState(false);
+  const [showAISettings, setShowAISettings] = reactExports.useState(false);
+  const [aiServiceInput, setAiServiceInput] = reactExports.useState(store.aiServiceDomain);
   const [images, setImages] = reactExports.useState([]);
   const [activeAnnotateItem, setActiveAnnotateItem] = reactExports.useState(null);
   const [isCapturing, setIsCapturing] = reactExports.useState(false);
@@ -3344,8 +3350,21 @@ const SubmitView = () => {
       }
     });
   }, []);
+  reactExports.useEffect(() => {
+    setAiServiceInput(store.aiServiceDomain);
+  }, [store.aiServiceDomain]);
+  const handleSaveAIService = async () => {
+    const val = aiServiceInput.trim();
+    store.setField("aiServiceDomain", val);
+    await store.save();
+    setShowAISettings(false);
+  };
   const handleAIFormat = async () => {
-    if (!userDescription.trim() || !store.aiServiceDomain) return;
+    if (!userDescription.trim()) return;
+    if (!store.aiServiceDomain) {
+      setShowAISettings(true);
+      return;
+    }
     setIsFormattingWithAI(true);
     setAiMessage(null);
     setAiFailed(false);
@@ -3754,7 +3773,58 @@ ${res.expected_result}`);
             ] })
           ] })
         ] }),
-        store.aiServiceDomain && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-1", children: [
+        showAISettings ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-purple-50/70 border border-purple-200 rounded-lg p-2.5 space-y-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-purple-900 flex items-center space-x-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { size: 13, className: "text-purple-600" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "配置 Bug AI 服务地址" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setShowAISettings(false),
+                className: "text-slate-400 hover:text-slate-600",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 13 })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                placeholder: "https://bug-ai.example.com",
+                value: aiServiceInput,
+                onChange: (e) => setAiServiceInput(e.target.value),
+                onKeyDown: (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSaveAIService();
+                  }
+                },
+                className: "flex-1 text-xs p-1.5 bg-white border border-purple-200 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: handleSaveAIService,
+                className: "px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-xs font-medium shrink-0 transition-colors",
+                children: "保存"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] text-purple-700/80", children: [
+            "服务地址保存后将持久化缓存。接口将请求 ",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("code", { children: [
+              "{URL}",
+              "/api/v1/bug-report/generate"
+            ] }),
+            "。"
+          ] })
+        ] }) : store.aiServiceDomain ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-1", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -3771,8 +3841,40 @@ ${res.expected_result}`);
               ] })
             }
           ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-[11px] text-slate-400 mt-1 px-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate max-w-[240px]", children: [
+              "AI 服务: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-600", children: store.aiServiceDomain })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  setAiServiceInput(store.aiServiceDomain);
+                  setShowAISettings(true);
+                },
+                className: "text-purple-600 hover:text-purple-700 underline text-[11px] shrink-0 ml-2",
+                children: "修改"
+              }
+            )
+          ] }),
           aiMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-[11px] mt-1.5 ${aiFailed ? "text-red-600" : "text-slate-500"}`, children: aiMessage })
-        ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              setAiServiceInput(store.aiServiceDomain);
+              setShowAISettings(true);
+            },
+            className: "w-full flex items-center justify-center space-x-1.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-dashed border-purple-300 rounded-lg text-xs font-medium transition-all",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Sparkles, { size: 13, className: "text-purple-600" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "配置 Bug AI 服务地址（一键智能整理）" })
+            ]
+          }
+        ) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3.5 space-y-2.5 shadow-xs", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [

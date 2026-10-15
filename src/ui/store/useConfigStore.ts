@@ -68,6 +68,8 @@ export const useConfigStore = create<ConfigStoreState>((set, get) => ({
       const saved = data[STORAGE_KEY];
       if (saved && typeof saved === 'object') {
         set({
+          domain: saved.domain || DEMO_DOMAIN,
+          aiServiceDomain: saved.aiServiceDomain || '',
           organizationID: saved.organizationID !== undefined ? saved.organizationID : DEMO_ORGANIZATION_ID,
           edition: saved.edition || 'standard',
           projectID: saved.projectID || '',
@@ -90,17 +92,19 @@ export const useConfigStore = create<ConfigStoreState>((set, get) => ({
   save: async () => {
     const state = get();
     const toSave = {
+      domain: state.domain.trim(),
+      aiServiceDomain: state.aiServiceDomain.trim(),
       organizationID: state.organizationID.trim(),
       edition: state.edition,
-      projectID: state.projectID,
-      assignedTo: state.assignedTo,
-      assignedToName: state.assignedToName,
-      workitemTypeID: state.workitemTypeID,
+      projectID: state.projectID.trim(),
+      assignedTo: state.assignedTo.trim(),
+      assignedToName: state.assignedToName.trim(),
+      workitemTypeID: state.workitemTypeID.trim(),
       cacheEnabled: state.cacheEnabled,
       cacheBackend: state.cacheBackend,
       workitemTypeCacheTTL: state.workitemTypeCacheTTL,
       tokenCacheTTL: state.tokenCacheTTL,
-      token: state.token,
+      token: state.token.trim(),
     };
     try {
       await chrome.storage.local.set({ [STORAGE_KEY]: toSave });
