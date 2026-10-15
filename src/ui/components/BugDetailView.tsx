@@ -24,7 +24,10 @@ export const BugDetailView: React.FC<BugDetailViewProps> = ({ item, onBack, onSt
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  const reporter = new YunxiaoBugReporter(store.buildConfigurationForProjectListing());
+  const currentProjectId = store.projectID || detail.spaceName || item?.spaceName || '';
+  const reporter = new YunxiaoBugReporter(
+    store.buildConfiguration(currentProjectId ? { projectID: currentProjectId } : undefined)
+  );
 
   useEffect(() => {
     let active = true;
@@ -45,7 +48,7 @@ export const BugDetailView: React.FC<BugDetailViewProps> = ({ item, onBack, onSt
 
     const fetchStatuses = async () => {
       try {
-        const statuses = await reporter.listWorkflowStatuses(undefined, item.id);
+        const statuses = await reporter.listWorkflowStatuses(store.workitemTypeID || undefined, item.id);
         if (active && statuses.length > 0) {
           setWorkflowStatuses(statuses);
         }

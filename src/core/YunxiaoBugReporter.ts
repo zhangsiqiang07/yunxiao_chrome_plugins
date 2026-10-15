@@ -262,7 +262,7 @@ export class YunxiaoBugReporter {
     if (!this.workitemService) throw YXBError.notConfigured();
     return this.withRetry(async (token) => {
       let typeId = workitemTypeId || this.config?.workitemTypeID;
-      if (!typeId && !workitemId) {
+      if (!typeId) {
         try {
           typeId = await this.resolveWorkitemTypeID(token);
         } catch {

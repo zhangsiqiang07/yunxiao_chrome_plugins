@@ -91,7 +91,13 @@ export class YXBHTTPClient {
     const resp = await fetch(url, init);
     if (!resp.ok) {
       let msg = '';
-      try { const j = await resp.json(); msg = j.message || ''; } catch { msg = resp.statusText; }
+      try {
+        const j = await resp.json();
+        msg = j.errorMessage || j.message || j.Message || j.error || JSON.stringify(j);
+      } catch {
+        msg = resp.statusText;
+      }
+      console.log(`← ${resp.status} ${url}：${msg}`);
       throw YXBError.httpError(resp.status, msg);
     }
   }

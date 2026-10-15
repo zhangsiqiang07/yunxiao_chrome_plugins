@@ -323,6 +323,21 @@ export class YXBWorkitemService {
         const list = parseStatuses(resp);
         if (list.length > 0) return list;
       } catch (e) {
+        // 继续尝试下一种方式
+      }
+
+      // 3. 尝试从字段定义中获取 status 字段的可选值（云效官方文档标注：fieldId 的可选值可以通过"获取工作项类型字段配置"接口获取）
+      try {
+        const fields = await this.fetchTypeFields(workitemTypeId, token);
+        const statusField = fields.find(f => f.id === 'status' || f.name === '状态' || f.format === 'status');
+        if (statusField && statusField.options && statusField.options.length > 0) {
+          return statusField.options.map(o => ({
+            id: String(o.value || o.id),
+            name: String(o.displayValue || o.value || o.id),
+            displayName: String(o.displayValue || o.value),
+          }));
+        }
+      } catch (e) {
         // 继续回退
       }
     }
@@ -331,7 +346,7 @@ export class YXBWorkitemService {
   }
 
   /**
-   * 修改工作项状态（优先使用 POST /workitems/update，并附带重试与 PUT 降级兼容）
+   * 修改工作项状态（云效官方标准接口：PUT /oapi/v1/projex/organizations/{org}/workitems/{id}，请求体 {"status":"statusId"}）
    */
   async updateWorkitemStatus(
     workitemId: string,
@@ -339,50 +354,31 @@ export class YXBWorkitemService {
     token: string,
     alternativeValue?: string,
   ): Promise<void> {
-    const doUpdateProperty = async (val: string) => {
-      await this.client.send<any>(
+    const doPut = async (val: string) => {
+      // 官方标准：body 包含 {"status": statusId}，同时兼容带 statusId 字段的服务端解析
+      await this.client.sendNoContent(
         this.config,
-        { kind: 'updateWorkitemProperty' },
-        'POST',
+        { kind: 'updateWorkitem', workitemId },
+        'PUT',
         token,
-        undefined,
-        {
-          identifier: workitemId,
-          propertyKey: 'status',
-          fieldType: 'status',
-          propertyValue: val,
-        },
+        { status: val, statusId: val },
       );
     };
 
     try {
-      await doUpdateProperty(statusValue);
+      await doPut(statusValue);
       return;
     } catch (err: any) {
-      // 若提供了备选值（如 status.name 与 status.id 互换），重试一次
+      // 若提供了备用值（如状态名称与状态 ID 互备），且当前值失败，重试备用值
       if (alternativeValue && alternativeValue !== statusValue) {
         try {
-          await doUpdateProperty(alternativeValue);
+          await doPut(alternativeValue);
           return;
         } catch {
-          // 备选值也失败，继续尝试 PUT 降级
+          // 抛出带有明确信息的异常
         }
       }
-
-      // 降级尝试 PUT /workitems/{workitemId}
-      try {
-        await this.client.sendNoContent(
-          this.config,
-          { kind: 'updateWorkitem', workitemId },
-          'PUT',
-          token,
-          { status: statusValue, statusId: statusValue },
-        );
-        return;
-      } catch {
-        // 若全部失败，抛出最原始的明确错误
-        throw err;
-      }
+      throw err;
     }
   }
 }

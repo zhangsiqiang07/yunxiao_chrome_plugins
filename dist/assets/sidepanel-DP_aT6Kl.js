@@ -1121,8 +1121,6 @@ function endpointPath(ep, config) {
       return `${base(config)}/workitems/${ep.workitemId}/attachments`;
     case "updateWorkitem":
       return `${base(config)}/workitems/${ep.workitemId}`;
-    case "updateWorkitemProperty":
-      return `${base(config)}/workitems/update`;
     case "workflows":
       return `${base(config)}/projects/${proj}/workitemTypes/${ep.workitemTypeId}/workflows`;
     case "workitemWorkflow":
@@ -1211,10 +1209,11 @@ class YXBHTTPClient {
       let msg = "";
       try {
         const j = await resp.json();
-        msg = j.message || "";
+        msg = j.errorMessage || j.message || j.Message || j.error || JSON.stringify(j);
       } catch {
         msg = resp.statusText;
       }
+      console.log(`← ${resp.status} ${url}：${msg}`);
       throw YXBError.httpError(resp.status, msg);
     }
   }
@@ -1615,51 +1614,46 @@ class YXBWorkitemService {
         if (list.length > 0) return list;
       } catch (e) {
       }
+      try {
+        const fields = await this.fetchTypeFields(workitemTypeId, token);
+        const statusField = fields.find((f) => f.id === "status" || f.name === "状态" || f.format === "status");
+        if (statusField && statusField.options && statusField.options.length > 0) {
+          return statusField.options.map((o) => ({
+            id: String(o.value || o.id),
+            name: String(o.displayValue || o.value || o.id),
+            displayName: String(o.displayValue || o.value)
+          }));
+        }
+      } catch (e) {
+      }
     }
     return defaultStatuses;
   }
   /**
-   * 修改工作项状态（优先使用 POST /workitems/update，并附带重试与 PUT 降级兼容）
+   * 修改工作项状态（云效官方标准接口：PUT /oapi/v1/projex/organizations/{org}/workitems/{id}，请求体 {"status":"statusId"}）
    */
   async updateWorkitemStatus(workitemId, statusValue, token, alternativeValue) {
-    const doUpdateProperty = async (val) => {
-      await this.client.send(
+    const doPut = async (val) => {
+      await this.client.sendNoContent(
         this.config,
-        { kind: "updateWorkitemProperty" },
-        "POST",
+        { kind: "updateWorkitem", workitemId },
+        "PUT",
         token,
-        void 0,
-        {
-          identifier: workitemId,
-          propertyKey: "status",
-          fieldType: "status",
-          propertyValue: val
-        }
+        { status: val, statusId: val }
       );
     };
     try {
-      await doUpdateProperty(statusValue);
+      await doPut(statusValue);
       return;
     } catch (err) {
       if (alternativeValue && alternativeValue !== statusValue) {
         try {
-          await doUpdateProperty(alternativeValue);
+          await doPut(alternativeValue);
           return;
         } catch {
         }
       }
-      try {
-        await this.client.sendNoContent(
-          this.config,
-          { kind: "updateWorkitem", workitemId },
-          "PUT",
-          token,
-          { status: statusValue, statusId: statusValue }
-        );
-        return;
-      } catch {
-        throw err;
-      }
+      throw err;
     }
   }
 }
@@ -1864,7 +1858,7 @@ class YunxiaoBugReporter {
     if (!this.workitemService) throw YXBError.notConfigured();
     return this.withRetry(async (token) => {
       let typeId = workitemTypeId || this.config?.workitemTypeID;
-      if (!typeId && !workitemId) {
+      if (!typeId) {
         try {
           typeId = await this.resolveWorkitemTypeID(token);
         } catch {
@@ -2282,7 +2276,10 @@ const BugDetailView = ({ item, onBack, onStatusChange }) => {
   const [workflowStatuses, setWorkflowStatuses] = reactExports.useState([]);
   const [statusMenuOpen, setStatusMenuOpen] = reactExports.useState(false);
   const [updatingStatus, setUpdatingStatus] = reactExports.useState(false);
-  const reporter = new YunxiaoBugReporter(store.buildConfigurationForProjectListing());
+  const currentProjectId = store.projectID || detail.spaceName || item?.spaceName || "";
+  const reporter = new YunxiaoBugReporter(
+    store.buildConfiguration(currentProjectId ? { projectID: currentProjectId } : void 0)
+  );
   reactExports.useEffect(() => {
     let active = true;
     if (!item?.id) return;
@@ -2300,7 +2297,7 @@ const BugDetailView = ({ item, onBack, onStatusChange }) => {
     };
     const fetchStatuses = async () => {
       try {
-        const statuses = await reporter.listWorkflowStatuses(void 0, item.id);
+        const statuses = await reporter.listWorkflowStatuses(store.workitemTypeID || void 0, item.id);
         if (active && statuses.length > 0) {
           setWorkflowStatuses(statuses);
         }
