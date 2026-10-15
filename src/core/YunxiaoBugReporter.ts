@@ -8,6 +8,7 @@ import type {
   YXBProject,
   YXBWorkitem,
   YXBWorkitemType,
+  YXBWorkflowStatus,
 } from '../models/YXBWorkitemModels';
 import { YXBAttachmentService } from './YXBAttachmentService';
 import { embedAttachments } from './YXBDescriptionEmbedder';
@@ -255,5 +256,31 @@ export class YunxiaoBugReporter {
 
   public async downloadImage(url: string): Promise<ArrayBuffer> {
     return this.withRetry(token => this.httpClient.download(url, token));
+  }
+
+  public async listWorkflowStatuses(workitemTypeId?: string, workitemId?: string): Promise<YXBWorkflowStatus[]> {
+    if (!this.workitemService) throw YXBError.notConfigured();
+    return this.withRetry(async (token) => {
+      let typeId = workitemTypeId || this.config?.workitemTypeID;
+      if (!typeId && !workitemId) {
+        try {
+          typeId = await this.resolveWorkitemTypeID(token);
+        } catch {
+          // ignore
+        }
+      }
+      return this.workitemService!.fetchWorkflowStatuses(typeId, workitemId, token);
+    });
+  }
+
+  public async updateWorkitemStatus(
+    workitemId: string,
+    statusIdOrName: string,
+    alternativeValue?: string,
+  ): Promise<void> {
+    if (!this.workitemService) throw YXBError.notConfigured();
+    return this.withRetry(token =>
+      this.workitemService!.updateWorkitemStatus(workitemId, statusIdOrName, token, alternativeValue)
+    );
   }
 }

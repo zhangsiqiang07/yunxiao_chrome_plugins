@@ -3,7 +3,7 @@ import { descriptionFormatApiValue, type YXBDescriptionFormat } from '../models/
 import type { YXBBugReport } from '../models/YXBBugReport';
 import type {
   YXBWorkitemType, YXBMember, YXBProject, YXBCurrentUser,
-  YXBWorkitem, YXBFieldDefinition,
+  YXBWorkitem, YXBFieldDefinition, YXBWorkflowStatus,
 } from '../models/YXBWorkitemModels';
 import { YXBHTTPClient } from './YXBHTTPClient';
 
@@ -263,5 +263,126 @@ export class YXBWorkitemService {
       this.config, { kind: 'getWorkitemFile', workitemId, fileId }, 'GET', token,
     );
     return resp.url ?? (resp.data?.url) ?? '';
+  }
+
+  /**
+   * 获取工作流状态列表（支持工作项自身的工作流或类型的全局工作流，附带默认回退）
+   */
+  async fetchWorkflowStatuses(
+    workitemTypeId?: string,
+    workitemId?: string,
+    token?: string,
+  ): Promise<YXBWorkflowStatus[]> {
+    const defaultStatuses: YXBWorkflowStatus[] = [
+      { id: '待处理', name: '待处理', displayName: '待处理' },
+      { id: '进行中', name: '进行中', displayName: '进行中' },
+      { id: '已解决', name: '已解决', displayName: '已解决' },
+      { id: '已关闭', name: '已关闭', displayName: '已关闭' },
+      { id: '已拒绝', name: '已拒绝', displayName: '已拒绝' },
+    ];
+
+    if (!token) return defaultStatuses;
+
+    const parseStatuses = (resp: any): YXBWorkflowStatus[] => {
+      if (!resp) return [];
+      let rawList: any[] = [];
+      if (Array.isArray(resp.statuses)) rawList = resp.statuses;
+      else if (resp.data && Array.isArray(resp.data.statuses)) rawList = resp.data.statuses;
+      else if (resp.result && Array.isArray(resp.result.statuses)) rawList = resp.result.statuses;
+      else if (Array.isArray(resp)) rawList = resp;
+      else rawList = extractList(resp, 'statuses', 'data', 'items', 'result');
+
+      return rawList.map((item: any) => ({
+        id: String(item.id || item.identifier || item.statusId || item.name || ''),
+        name: String(item.name || item.displayName || item.nameCn || item.id || ''),
+        displayName: item.displayName || item.name || '',
+        nameEn: item.nameEn || item.statusNameEn,
+        stageName: item.stageName || item.workflowStageName,
+      })).filter(s => s.name);
+    };
+
+    // 1. 若有 workitemId，先尝试查询该具体工作项的工作流
+    if (workitemId) {
+      try {
+        const resp = await this.client.send<any>(
+          this.config, { kind: 'workitemWorkflow', workitemId }, 'GET', token,
+        );
+        const list = parseStatuses(resp);
+        if (list.length > 0) return list;
+      } catch (e) {
+        // 继续尝试下一种方式
+      }
+    }
+
+    // 2. 若有 workitemTypeId，尝试查询对应类型的 workflows
+    if (workitemTypeId) {
+      try {
+        const resp = await this.client.send<any>(
+          this.config, { kind: 'workflows', workitemTypeId }, 'GET', token,
+        );
+        const list = parseStatuses(resp);
+        if (list.length > 0) return list;
+      } catch (e) {
+        // 继续回退
+      }
+    }
+
+    return defaultStatuses;
+  }
+
+  /**
+   * 修改工作项状态（优先使用 POST /workitems/update，并附带重试与 PUT 降级兼容）
+   */
+  async updateWorkitemStatus(
+    workitemId: string,
+    statusValue: string,
+    token: string,
+    alternativeValue?: string,
+  ): Promise<void> {
+    const doUpdateProperty = async (val: string) => {
+      await this.client.send<any>(
+        this.config,
+        { kind: 'updateWorkitemProperty' },
+        'POST',
+        token,
+        undefined,
+        {
+          identifier: workitemId,
+          propertyKey: 'status',
+          fieldType: 'status',
+          propertyValue: val,
+        },
+      );
+    };
+
+    try {
+      await doUpdateProperty(statusValue);
+      return;
+    } catch (err: any) {
+      // 若提供了备选值（如 status.name 与 status.id 互换），重试一次
+      if (alternativeValue && alternativeValue !== statusValue) {
+        try {
+          await doUpdateProperty(alternativeValue);
+          return;
+        } catch {
+          // 备选值也失败，继续尝试 PUT 降级
+        }
+      }
+
+      // 降级尝试 PUT /workitems/{workitemId}
+      try {
+        await this.client.sendNoContent(
+          this.config,
+          { kind: 'updateWorkitem', workitemId },
+          'PUT',
+          token,
+          { status: statusValue, statusId: statusValue },
+        );
+        return;
+      } catch {
+        // 若全部失败，抛出最原始的明确错误
+        throw err;
+      }
+    }
   }
 }

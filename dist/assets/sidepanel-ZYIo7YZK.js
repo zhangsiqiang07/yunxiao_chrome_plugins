@@ -1121,6 +1121,12 @@ function endpointPath(ep, config) {
       return `${base(config)}/workitems/${ep.workitemId}/attachments`;
     case "updateWorkitem":
       return `${base(config)}/workitems/${ep.workitemId}`;
+    case "updateWorkitemProperty":
+      return `${base(config)}/workitems/update`;
+    case "workflows":
+      return `${base(config)}/projects/${proj}/workitemTypes/${ep.workitemTypeId}/workflows`;
+    case "workitemWorkflow":
+      return `${base(config)}/workitems/${ep.workitemId}/workflow`;
     case "getWorkitem":
       return `${base(config)}/workitems/${ep.workitemId}`;
     case "getWorkitemFile":
@@ -1156,7 +1162,15 @@ class YXBHTTPClient {
       console.log(`← ${resp.status} ${url}（${elapsed}s）：${msg}`);
       throw YXBError.httpError(resp.status, msg);
     }
-    const data = await resp.json();
+    const text = await resp.text();
+    let data = {};
+    if (text && text.trim()) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+    }
     console.log(`← ${resp.status} ${url}（${elapsed}s）`);
     return data;
   }
@@ -1548,6 +1562,106 @@ class YXBWorkitemService {
     );
     return resp.url ?? resp.data?.url ?? "";
   }
+  /**
+   * 获取工作流状态列表（支持工作项自身的工作流或类型的全局工作流，附带默认回退）
+   */
+  async fetchWorkflowStatuses(workitemTypeId, workitemId, token) {
+    const defaultStatuses = [
+      { id: "待处理", name: "待处理", displayName: "待处理" },
+      { id: "进行中", name: "进行中", displayName: "进行中" },
+      { id: "已解决", name: "已解决", displayName: "已解决" },
+      { id: "已关闭", name: "已关闭", displayName: "已关闭" },
+      { id: "已拒绝", name: "已拒绝", displayName: "已拒绝" }
+    ];
+    if (!token) return defaultStatuses;
+    const parseStatuses = (resp) => {
+      if (!resp) return [];
+      let rawList = [];
+      if (Array.isArray(resp.statuses)) rawList = resp.statuses;
+      else if (resp.data && Array.isArray(resp.data.statuses)) rawList = resp.data.statuses;
+      else if (resp.result && Array.isArray(resp.result.statuses)) rawList = resp.result.statuses;
+      else if (Array.isArray(resp)) rawList = resp;
+      else rawList = extractList(resp, "statuses", "data", "items", "result");
+      return rawList.map((item) => ({
+        id: String(item.id || item.identifier || item.statusId || item.name || ""),
+        name: String(item.name || item.displayName || item.nameCn || item.id || ""),
+        displayName: item.displayName || item.name || "",
+        nameEn: item.nameEn || item.statusNameEn,
+        stageName: item.stageName || item.workflowStageName
+      })).filter((s) => s.name);
+    };
+    if (workitemId) {
+      try {
+        const resp = await this.client.send(
+          this.config,
+          { kind: "workitemWorkflow", workitemId },
+          "GET",
+          token
+        );
+        const list = parseStatuses(resp);
+        if (list.length > 0) return list;
+      } catch (e) {
+      }
+    }
+    if (workitemTypeId) {
+      try {
+        const resp = await this.client.send(
+          this.config,
+          { kind: "workflows", workitemTypeId },
+          "GET",
+          token
+        );
+        const list = parseStatuses(resp);
+        if (list.length > 0) return list;
+      } catch (e) {
+      }
+    }
+    return defaultStatuses;
+  }
+  /**
+   * 修改工作项状态（优先使用 POST /workitems/update，并附带重试与 PUT 降级兼容）
+   */
+  async updateWorkitemStatus(workitemId, statusValue, token, alternativeValue) {
+    const doUpdateProperty = async (val) => {
+      await this.client.send(
+        this.config,
+        { kind: "updateWorkitemProperty" },
+        "POST",
+        token,
+        void 0,
+        {
+          identifier: workitemId,
+          propertyKey: "status",
+          fieldType: "status",
+          propertyValue: val
+        }
+      );
+    };
+    try {
+      await doUpdateProperty(statusValue);
+      return;
+    } catch (err) {
+      if (alternativeValue && alternativeValue !== statusValue) {
+        try {
+          await doUpdateProperty(alternativeValue);
+          return;
+        } catch {
+        }
+      }
+      try {
+        await this.client.sendNoContent(
+          this.config,
+          { kind: "updateWorkitem", workitemId },
+          "PUT",
+          token,
+          { status: statusValue, statusId: statusValue }
+        );
+        return;
+      } catch {
+        throw err;
+      }
+    }
+  }
 }
 
 class YunxiaoBugReporter {
@@ -1745,6 +1859,25 @@ class YunxiaoBugReporter {
   }
   async downloadImage(url) {
     return this.withRetry((token) => this.httpClient.download(url, token));
+  }
+  async listWorkflowStatuses(workitemTypeId, workitemId) {
+    if (!this.workitemService) throw YXBError.notConfigured();
+    return this.withRetry(async (token) => {
+      let typeId = workitemTypeId || this.config?.workitemTypeID;
+      if (!typeId && !workitemId) {
+        try {
+          typeId = await this.resolveWorkitemTypeID(token);
+        } catch {
+        }
+      }
+      return this.workitemService.fetchWorkflowStatuses(typeId, workitemId, token);
+    });
+  }
+  async updateWorkitemStatus(workitemId, statusIdOrName, alternativeValue) {
+    if (!this.workitemService) throw YXBError.notConfigured();
+    return this.withRetry(
+      (token) => this.workitemService.updateWorkitemStatus(workitemId, statusIdOrName, token, alternativeValue)
+    );
   }
 }
 
@@ -2140,11 +2273,15 @@ const AuthImageView = ({
   ) });
 };
 
-const BugDetailView = ({ item, onBack }) => {
+const BugDetailView = ({ item, onBack, onStatusChange }) => {
   const store = useConfigStore();
   const [detail, setDetail] = reactExports.useState(item || { id: "", subject: "" });
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
+  const [successToast, setSuccessToast] = reactExports.useState(null);
+  const [workflowStatuses, setWorkflowStatuses] = reactExports.useState([]);
+  const [statusMenuOpen, setStatusMenuOpen] = reactExports.useState(false);
+  const [updatingStatus, setUpdatingStatus] = reactExports.useState(false);
   const reporter = new YunxiaoBugReporter(store.buildConfigurationForProjectListing());
   reactExports.useEffect(() => {
     let active = true;
@@ -2161,11 +2298,39 @@ const BugDetailView = ({ item, onBack }) => {
         if (active) setLoading(false);
       }
     };
+    const fetchStatuses = async () => {
+      try {
+        const statuses = await reporter.listWorkflowStatuses(void 0, item.id);
+        if (active && statuses.length > 0) {
+          setWorkflowStatuses(statuses);
+        }
+      } catch {
+      }
+    };
     fetchDetail();
+    fetchStatuses();
     return () => {
       active = false;
     };
   }, [item?.id]);
+  const handleUpdateStatus = async (targetStatus) => {
+    if (!detail.id) return;
+    setStatusMenuOpen(false);
+    setUpdatingStatus(true);
+    setError(null);
+    const targetName = targetStatus.displayName || targetStatus.name;
+    try {
+      await reporter.updateWorkitemStatus(detail.id, targetStatus.id, targetStatus.name);
+      setDetail((prev) => ({ ...prev, statusName: targetName }));
+      setSuccessToast(`状态已更新为：${targetName}`);
+      setTimeout(() => setSuccessToast(null), 3e3);
+      onStatusChange?.(detail.id, targetName);
+    } catch (err) {
+      setError(err.message || "修改状态失败");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
   const openInYunxiao = () => {
     const proj = store.projectID || detail.spaceName || "";
     const wid = detail.id || item?.id || "";
@@ -2176,6 +2341,40 @@ const BugDetailView = ({ item, onBack }) => {
     if (!ms) return "-";
     const d = new Date(ms);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+  const getStatusDotColor = (name) => {
+    if (!name) return "bg-slate-400";
+    const n = name.toLowerCase();
+    if (n.includes("解决") || n.includes("完成") || n.includes("resolve") || n.includes("done") || n.includes("fix")) {
+      return "bg-emerald-500";
+    }
+    if (n.includes("处理中") || n.includes("进行中") || n.includes("progress") || n.includes("doing")) {
+      return "bg-blue-500";
+    }
+    if (n.includes("关闭") || n.includes("close")) {
+      return "bg-purple-500";
+    }
+    if (n.includes("拒绝") || n.includes("reject") || n.includes("reopen")) {
+      return "bg-rose-500";
+    }
+    return "bg-amber-500";
+  };
+  const getStatusColor = (name) => {
+    if (!name) return "bg-slate-100 text-slate-700 border-slate-200";
+    const n = name.toLowerCase();
+    if (n.includes("解决") || n.includes("完成") || n.includes("resolve") || n.includes("done") || n.includes("fix")) {
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    }
+    if (n.includes("处理中") || n.includes("进行中") || n.includes("progress") || n.includes("doing")) {
+      return "bg-blue-50 text-blue-700 border-blue-200";
+    }
+    if (n.includes("关闭") || n.includes("close")) {
+      return "bg-purple-50 text-purple-700 border-purple-200";
+    }
+    if (n.includes("拒绝") || n.includes("reject") || n.includes("reopen")) {
+      return "bg-rose-50 text-rose-700 border-rose-200";
+    }
+    return "bg-amber-50 text-amber-700 border-amber-200";
   };
   const parsedDesc = parseDescription(detail?.description);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-slate-50 overflow-y-auto pb-10", children: [
@@ -2226,18 +2425,69 @@ const BugDetailView = ({ item, onBack }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx(CircleAlert, { size: 15 }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: error })
       ] }),
+      successToast && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 flex items-center space-x-2 animate-fadeIn", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { size: 15, className: "text-emerald-600" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: successToast })
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3.5 space-y-2.5 shadow-sm text-xs", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-slate-800", children: "基本信息" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-slate-600", children: [
-          detail.statusName && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Flag, { size: 13, className: "text-slate-400" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400", children: "状态:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-slate-700", children: detail.statusName })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Flag, { size: 13, className: "text-slate-400 shrink-0" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400 shrink-0", children: "状态:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  disabled: updatingStatus,
+                  onClick: () => setStatusMenuOpen((prev) => !prev),
+                  className: `inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-xs font-medium border transition-all ${getStatusColor(detail.statusName)} ${updatingStatus ? "opacity-70 cursor-not-allowed" : "hover:shadow-xs cursor-pointer"}`,
+                  title: "点击修改状态",
+                  children: [
+                    updatingStatus ? /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 11, className: "animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-1.5 h-1.5 rounded-full ${getStatusDotColor(detail.statusName)}` }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: detail.statusName || "未设置" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronDown, { size: 11, className: "opacity-60" })
+                  ]
+                }
+              )
+            ] }),
+            statusMenuOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: "fixed inset-0 z-20",
+                  onClick: () => setStatusMenuOpen(false)
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-10 top-7 z-30 w-36 bg-white border border-slate-200 rounded-lg shadow-lg py-1 text-xs", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2.5 py-1 text-[10px] text-slate-400 font-medium border-b border-slate-100 mb-0.5", children: "修改工作项状态" }),
+                workflowStatuses.map((st) => {
+                  const isCurrent = detail.statusName === st.name || detail.statusName === st.displayName;
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => handleUpdateStatus(st),
+                      className: `w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-50 transition-colors text-left ${isCurrent ? "font-semibold text-blue-600 bg-blue-50/50" : "text-slate-700"}`,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-1.5 h-1.5 rounded-full ${getStatusDotColor(st.name || st.displayName)}` }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: st.displayName || st.name })
+                        ] }),
+                        isCurrent && /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { size: 12, className: "text-blue-600" })
+                      ]
+                    },
+                    st.id || st.name
+                  );
+                })
+              ] })
+            ] })
           ] }),
           detail.assignedToName && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(User, { size: 13, className: "text-slate-400" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400", children: "负责人:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-slate-700", children: detail.assignedToName })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-slate-700 truncate", children: detail.assignedToName })
           ] }),
           detail.priorityName && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { size: 13, className: "text-slate-400" }),
@@ -2252,7 +2502,7 @@ const BugDetailView = ({ item, onBack }) => {
           detail.creatorName && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(User, { size: 13, className: "text-slate-400" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400", children: "创建人:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-slate-700", children: detail.creatorName })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-slate-700 truncate", children: detail.creatorName })
           ] }),
           detail.gmtCreate && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2 flex items-center space-x-1.5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Calendar, { size: 13, className: "text-slate-400" }),
@@ -2355,8 +2605,35 @@ const BugListView = () => {
     store.save();
     setIsEditingProject(false);
   };
+  const getStatusBadgeClass = (name) => {
+    if (!name) return "text-slate-500 bg-slate-100 border-slate-200";
+    const n = name.toLowerCase();
+    if (n.includes("解决") || n.includes("完成") || n.includes("resolve") || n.includes("done") || n.includes("fix")) {
+      return "text-emerald-700 bg-emerald-50 border-emerald-200";
+    }
+    if (n.includes("处理中") || n.includes("进行中") || n.includes("progress") || n.includes("doing")) {
+      return "text-blue-700 bg-blue-50 border-blue-200";
+    }
+    if (n.includes("关闭") || n.includes("close")) {
+      return "text-purple-700 bg-purple-50 border-purple-200";
+    }
+    if (n.includes("拒绝") || n.includes("reject") || n.includes("reopen")) {
+      return "text-rose-700 bg-rose-50 border-rose-200";
+    }
+    return "text-amber-700 bg-amber-50 border-amber-200";
+  };
   if (selectedItem) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(BugDetailView, { item: selectedItem, onBack: () => setSelectedItem(null) });
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      BugDetailView,
+      {
+        item: selectedItem,
+        onBack: () => setSelectedItem(null),
+        onStatusChange: (workitemId, newStatus) => {
+          setWorkitems((prev) => prev.map((w) => w.id === workitemId ? { ...w, statusName: newStatus } : w));
+          setSelectedItem((prev) => prev && prev.id === workitemId ? { ...prev, statusName: newStatus } : prev);
+        }
+      }
+    );
   }
   projectOptions.find((p) => p.id === store.projectID)?.name || store.projectID || "选择项目";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-slate-50 overflow-hidden", children: [
@@ -2466,7 +2743,7 @@ const BugListView = () => {
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-medium text-slate-800 line-clamp-2 leading-snug", children: item.subject || "(无标题)" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-[11px] text-slate-400 pt-0.5", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
-                item.statusName && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center space-x-1 text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded", children: [
+                item.statusName && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${getStatusBadgeClass(item.statusName)}`, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Flag, { size: 10 }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: item.statusName })
                 ] }),

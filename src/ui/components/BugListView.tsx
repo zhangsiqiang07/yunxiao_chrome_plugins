@@ -90,8 +90,35 @@ export const BugListView: React.FC = () => {
     setIsEditingProject(false);
   };
 
+  const getStatusBadgeClass = (name?: string) => {
+    if (!name) return 'text-slate-500 bg-slate-100 border-slate-200';
+    const n = name.toLowerCase();
+    if (n.includes('解决') || n.includes('完成') || n.includes('resolve') || n.includes('done') || n.includes('fix')) {
+      return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+    }
+    if (n.includes('处理中') || n.includes('进行中') || n.includes('progress') || n.includes('doing')) {
+      return 'text-blue-700 bg-blue-50 border-blue-200';
+    }
+    if (n.includes('关闭') || n.includes('close')) {
+      return 'text-purple-700 bg-purple-50 border-purple-200';
+    }
+    if (n.includes('拒绝') || n.includes('reject') || n.includes('reopen')) {
+      return 'text-rose-700 bg-rose-50 border-rose-200';
+    }
+    return 'text-amber-700 bg-amber-50 border-amber-200';
+  };
+
   if (selectedItem) {
-    return <BugDetailView item={selectedItem} onBack={() => setSelectedItem(null)} />;
+    return (
+      <BugDetailView
+        item={selectedItem}
+        onBack={() => setSelectedItem(null)}
+        onStatusChange={(workitemId, newStatus) => {
+          setWorkitems(prev => prev.map(w => w.id === workitemId ? { ...w, statusName: newStatus } : w));
+          setSelectedItem(prev => prev && prev.id === workitemId ? { ...prev, statusName: newStatus } : prev);
+        }}
+      />
+    );
   }
 
   const currentProjectName = projectOptions.find(p => p.id === store.projectID)?.name || store.projectID || '选择项目';
@@ -211,7 +238,7 @@ export const BugListView: React.FC = () => {
             <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
               <div className="flex items-center space-x-2">
                 {item.statusName && (
-                  <span className="flex items-center space-x-1 text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                  <span className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${getStatusBadgeClass(item.statusName)}`}>
                     <Flag size={10} />
                     <span>{item.statusName}</span>
                   </span>

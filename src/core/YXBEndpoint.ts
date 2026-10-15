@@ -11,6 +11,9 @@ export type EndpointType =
   | { kind: 'workitemsSearch' }
   | { kind: 'attachments'; workitemId: string }
   | { kind: 'updateWorkitem'; workitemId: string }
+  | { kind: 'updateWorkitemProperty' }
+  | { kind: 'workflows'; workitemTypeId: string }
+  | { kind: 'workitemWorkflow'; workitemId: string }
   | { kind: 'getWorkitem'; workitemId: string }
   | { kind: 'getWorkitemFile'; workitemId: string; fileId: string };
 
@@ -44,6 +47,12 @@ export function endpointPath(ep: EndpointType, config: YXBConfiguration): string
       return `${base(config)}/workitems/${ep.workitemId}/attachments`;
     case 'updateWorkitem':
       return `${base(config)}/workitems/${ep.workitemId}`;
+    case 'updateWorkitemProperty':
+      return `${base(config)}/workitems/update`;
+    case 'workflows':
+      return `${base(config)}/projects/${proj}/workitemTypes/${ep.workitemTypeId}/workflows`;
+    case 'workitemWorkflow':
+      return `${base(config)}/workitems/${ep.workitemId}/workflow`;
     case 'getWorkitem':
       return `${base(config)}/workitems/${ep.workitemId}`;
     case 'getWorkitemFile':

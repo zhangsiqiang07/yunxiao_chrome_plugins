@@ -60,6 +60,15 @@ export interface YXBFieldOption {
   displayValue: string;
 }
 
+/** 工作流状态 */
+export interface YXBWorkflowStatus {
+  id: string;
+  name: string;
+  displayName?: string;
+  nameEn?: string;
+  stageName?: string;
+}
+
 /** 字段定义 */
 export interface YXBFieldDefinition {
   id: string;

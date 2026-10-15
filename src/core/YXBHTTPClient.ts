@@ -36,7 +36,15 @@ export class YXBHTTPClient {
       console.log(`← ${resp.status} ${url}（${elapsed}s）：${msg}`);
       throw YXBError.httpError(resp.status, msg);
     }
-    const data = await resp.json();
+    const text = await resp.text();
+    let data: any = {};
+    if (text && text.trim()) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+    }
     console.log(`← ${resp.status} ${url}（${elapsed}s）`);
     return data as T;
   }
