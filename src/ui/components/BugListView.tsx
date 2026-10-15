@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, RefreshCw, Flag, User, Clock, AlertCircle, Edit2, Check, X } from 'lucide-react';
+import {
+  ChevronDown, RefreshCw, Flag, User, Clock, AlertCircle, Edit2, Check, X,
+  Search, RotateCcw,
+} from 'lucide-react';
 import { YunxiaoBugReporter } from '../../core/YunxiaoBugReporter';
-import type { YXBProject, YXBWorkitem } from '../../models/YXBWorkitemModels';
+import type {
+  YXBProject, YXBWorkitem, YXBWorkflowStatus, YXBMember, YXBCurrentUser, YXBWorkitemFilter,
+} from '../../models/YXBWorkitemModels';
 import { useConfigStore } from '../store/useConfigStore';
 import { BugDetailView } from './BugDetailView';
 
@@ -23,6 +28,14 @@ export const BugListView: React.FC = () => {
   const [isEditingProject, setIsEditingProject] = useState(false);
   const [manualProjectInput, setManualProjectInput] = useState(store.projectID);
 
+  // 筛选条件与选项
+  const [selectedStatusId, setSelectedStatusId] = useState<string>('');
+  const [selectedAssignee, setSelectedAssignee] = useState<string>('');
+  const [keyword, setKeyword] = useState<string>('');
+  const [statusOptions, setStatusOptions] = useState<YXBWorkflowStatus[]>([]);
+  const [memberOptions, setMemberOptions] = useState<YXBMember[]>([]);
+  const [currentUser, setCurrentUser] = useState<YXBCurrentUser | null>(null);
+
   const reporter = new YunxiaoBugReporter(store.buildConfigurationForProjectListing());
 
   // 1. 加载项目列表
@@ -40,16 +53,61 @@ export const BugListView: React.FC = () => {
     }
   };
 
-  // 2. 加载 Bug 列表
-  const loadWorkitems = async (targetPage = 1, append = false) => {
+  // 2. 加载下拉筛选选项（状态列表、成员列表、当前用户信息）
+  const loadFilterOptions = async (projId?: string) => {
+    const targetProj = projId || store.projectID;
+    if (!targetProj) return;
+    try {
+      const rep = new YunxiaoBugReporter(store.buildConfiguration({ projectID: targetProj }));
+      const [membersResult, statusesResult, userResult] = await Promise.allSettled([
+        rep.listProjectMembers(),
+        rep.listWorkflowStatuses(store.workitemTypeID || undefined),
+        rep.getCurrentUser(),
+      ]);
+
+      if (membersResult.status === 'fulfilled') setMemberOptions(membersResult.value);
+      if (statusesResult.status === 'fulfilled') setStatusOptions(statusesResult.value);
+      if (userResult.status === 'fulfilled') setCurrentUser(userResult.value);
+    } catch {}
+  };
+
+  // 3. 加载 Bug 列表（带筛选）
+  const loadWorkitems = async (
+    targetPage = 1,
+    append = false,
+    overrideFilters?: { statusId?: string; assignedTo?: string; keyword?: string },
+  ) => {
     if (!store.projectID) return;
     if (append) setLoadingMore(true);
     else setLoading(true);
     setError(null);
 
+    const stId = overrideFilters?.statusId !== undefined ? overrideFilters.statusId : selectedStatusId;
+    const asId = overrideFilters?.assignedTo !== undefined ? overrideFilters.assignedTo : selectedAssignee;
+    const kw = overrideFilters?.keyword !== undefined ? overrideFilters.keyword : keyword;
+
+    // 解析实际负责人 ID
+    let resolvedAssignee: string | undefined = undefined;
+    if (asId === '__ME__') {
+      resolvedAssignee = currentUser?.id || store.assignedTo || undefined;
+    } else if (asId) {
+      resolvedAssignee = asId;
+    }
+
+    // 解析实际状态名
+    const matchingStatus = statusOptions.find(s => s.id === stId || s.name === stId);
+    const resolvedStatusName = matchingStatus?.name || matchingStatus?.displayName || (stId ? stId : undefined);
+
+    const filterPayload: YXBWorkitemFilter = {
+      statusId: stId || undefined,
+      statusName: resolvedStatusName,
+      assignedTo: resolvedAssignee,
+      keyword: kw.trim() || undefined,
+    };
+
     try {
       const rep = new YunxiaoBugReporter(store.buildConfiguration());
-      const items = await rep.listWorkitems(targetPage, 20, 'Bug');
+      const items = await rep.listWorkitems(targetPage, 20, 'Bug', filterPayload);
       if (append) {
         setWorkitems(prev => [...prev, ...items]);
         setPage(targetPage);
@@ -66,13 +124,22 @@ export const BugListView: React.FC = () => {
     }
   };
 
+  const handleResetFilters = () => {
+    setSelectedStatusId('');
+    setSelectedAssignee('');
+    setKeyword('');
+    loadWorkitems(1, false, { statusId: '', assignedTo: '', keyword: '' });
+  };
+
   useEffect(() => {
     loadProjects();
+    loadFilterOptions();
     loadWorkitems(1, false);
   }, []);
 
   useEffect(() => {
     if (store.projectID) {
+      loadFilterOptions(store.projectID);
       loadWorkitems(1, false);
     }
   }, [store.projectID]);
@@ -107,6 +174,8 @@ export const BugListView: React.FC = () => {
     }
     return 'text-amber-700 bg-amber-50 border-amber-200';
   };
+
+  const hasActiveFilters = Boolean(selectedStatusId || selectedAssignee || keyword.trim());
 
   if (selectedItem) {
     return (
@@ -200,6 +269,7 @@ export const BugListView: React.FC = () => {
           type="button"
           onClick={() => {
             loadProjects();
+            loadFilterOptions();
             loadWorkitems(1, false);
           }}
           disabled={loading || !store.projectID}
@@ -208,6 +278,106 @@ export const BugListView: React.FC = () => {
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
         </button>
+      </div>
+
+      {/* 搜索与筛选工具栏 */}
+      <div className="px-3 py-2 bg-white border-b border-slate-200/80 space-y-1.5 shadow-2xs shrink-0">
+        {/* 搜索输入框 */}
+        <div className="relative flex items-center">
+          <Search size={13} className="absolute left-2.5 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="搜索 Bug 标题 / 编号..."
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                loadWorkitems(1, false, { keyword: e.currentTarget.value });
+              }
+            }}
+            className="w-full text-xs pl-7 pr-7 py-1.5 bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-blue-400 rounded-lg transition-all focus:outline-none placeholder:text-slate-400"
+          />
+          {keyword && (
+            <button
+              type="button"
+              onClick={() => {
+                setKeyword('');
+                loadWorkitems(1, false, { keyword: '' });
+              }}
+              className="absolute right-2 p-0.5 text-slate-400 hover:text-slate-600 rounded"
+              title="清空搜索"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+
+        {/* 筛选选择器：状态与负责人 */}
+        <div className="flex items-center space-x-1.5 text-xs">
+          {/* 状态筛选 */}
+          <div className="relative flex-1">
+            <select
+              value={selectedStatusId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedStatusId(val);
+                loadWorkitems(1, false, { statusId: val });
+              }}
+              className={`w-full text-[11px] py-1 pl-2 pr-5 rounded-md border appearance-none truncate cursor-pointer transition-colors ${
+                selectedStatusId
+                  ? 'bg-blue-50 text-blue-700 border-blue-200 font-medium'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <option value="">全部状态</option>
+              {statusOptions.map((st) => (
+                <option key={st.id || st.name} value={st.id || st.name}>
+                  {st.displayName || st.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={11} className="absolute right-1.5 top-2 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* 负责人筛选 */}
+          <div className="relative flex-1">
+            <select
+              value={selectedAssignee}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedAssignee(val);
+                loadWorkitems(1, false, { assignedTo: val });
+              }}
+              className={`w-full text-[11px] py-1 pl-2 pr-5 rounded-md border appearance-none truncate cursor-pointer transition-colors ${
+                selectedAssignee
+                  ? 'bg-blue-50 text-blue-700 border-blue-200 font-medium'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <option value="">全部负责人</option>
+              <option value="__ME__">指派给我 {currentUser?.name ? `(${currentUser.name})` : ''}</option>
+              {memberOptions.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={11} className="absolute right-1.5 top-2 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* 重置筛选按钮 */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="p-1 px-1.5 text-[11px] text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors shrink-0 flex items-center space-x-0.5"
+              title="重置所有筛选"
+            >
+              <RotateCcw size={10} />
+              <span>重置</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 列表内容 */}
@@ -222,7 +392,22 @@ export const BugListView: React.FC = () => {
         {workitems.length === 0 && !loading && !error && (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 text-xs space-y-2">
             <Flag size={28} className="text-slate-300 stroke-1" />
-            <span>{!store.projectID ? '请先选择项目' : '暂无 Bug 工作项'}</span>
+            <span>
+              {!store.projectID
+                ? '请先选择项目'
+                : hasActiveFilters
+                ? '未找到符合筛选条件的 Bug'
+                : '暂无 Bug 工作项'}
+            </span>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="mt-1 px-2.5 py-1 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md font-medium transition-colors"
+              >
+                清空筛选条件
+              </button>
+            )}
           </div>
         )}
 

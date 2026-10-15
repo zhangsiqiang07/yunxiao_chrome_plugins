@@ -911,6 +911,19 @@ const Save = createLucideIcon("Save", [
  */
 
 
+const Search = createLucideIcon("Search", [
+  ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }],
+  ["path", { d: "m21 21-4.3-4.3", key: "1qie3q" }]
+]);
+
+/**
+ * @license lucide-react v0.460.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+
+
 const Settings = createLucideIcon("Settings", [
   [
     "path",
@@ -1488,25 +1501,72 @@ class YXBWorkitemService {
     const items = rawList.map(normalizeProject).filter((p) => p.id);
     return items.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }
-  async fetchWorkitems(page, perPage, category, token) {
+  async fetchWorkitems(page, perPage, category, token, filter) {
+    const body = {
+      category,
+      spaceId: (this.config.projectID ?? "").trim(),
+      spaceType: "Project",
+      orderBy: "gmtCreate",
+      page,
+      perPage,
+      sort: "desc"
+    };
+    const conditionItems = [];
+    if (filter?.statusId) {
+      conditionItems.push({
+        fieldIdentifier: "status",
+        operator: "CONTAINS",
+        value: [filter.statusId],
+        toValue: null,
+        className: "status",
+        format: "list"
+      });
+    }
+    if (filter?.assignedTo) {
+      conditionItems.push({
+        fieldIdentifier: "assignedTo",
+        operator: "CONTAINS",
+        value: [filter.assignedTo],
+        toValue: null,
+        className: "user",
+        format: "list"
+      });
+    }
+    if (filter?.keyword && filter.keyword.trim()) {
+      conditionItems.push({
+        fieldIdentifier: "subject",
+        operator: "CONTAINS",
+        value: [filter.keyword.trim()],
+        toValue: null,
+        className: "string",
+        format: "input"
+      });
+    }
+    if (conditionItems.length > 0) {
+      body.conditions = JSON.stringify({
+        conditionGroups: [conditionItems]
+      });
+    }
     const resp = await this.client.send(
       this.config,
       { kind: "workitemsSearch" },
       "POST",
       token,
       void 0,
-      {
-        category,
-        spaceId: (this.config.projectID ?? "").trim(),
-        spaceType: "Project",
-        orderBy: "gmtCreate",
-        page,
-        perPage,
-        sort: "desc"
-      }
+      body
     );
     const list = extractList(resp, "workitems", "data", "items", "list", "result");
-    return list.map(normalizeWorkitem).filter((w) => w.id);
+    let items = list.map(normalizeWorkitem).filter((w) => w.id);
+    if (filter?.statusName) {
+      items = items.filter((w) => !w.statusName || w.statusName === filter.statusName);
+    }
+    if (filter?.keyword && filter.keyword.trim()) {
+      const kw = filter.keyword.trim().toLowerCase();
+      items = items.filter(
+        (w) => w.subject && w.subject.toLowerCase().includes(kw) || w.id && w.id.toLowerCase().includes(kw) || w.serialNumber && String(w.serialNumber).toLowerCase().includes(kw)
+      );
+    }
+    return items;
   }
   async createWorkitem(report, workitemTypeID, token) {
     const body = {
@@ -1834,9 +1894,9 @@ class YunxiaoBugReporter {
     if (!this.workitemService) throw YXBError.notConfigured();
     return this.withRetry((token) => this.workitemService.fetchTypeFields(workitemTypeID, token));
   }
-  async listWorkitems(page = 1, perPage = 20, category = "Bug") {
+  async listWorkitems(page = 1, perPage = 20, category = "Bug", filter) {
     if (!this.workitemService) throw YXBError.notConfigured();
-    return this.withRetry((token) => this.workitemService.fetchWorkitems(page, perPage, category, token));
+    return this.withRetry((token) => this.workitemService.fetchWorkitems(page, perPage, category, token, filter));
   }
   async getWorkitem(workitemID) {
     if (!this.workitemService) throw YXBError.notConfigured();
@@ -2545,6 +2605,12 @@ const BugListView = () => {
   const [loadingProjects, setLoadingProjects] = reactExports.useState(false);
   const [isEditingProject, setIsEditingProject] = reactExports.useState(false);
   const [manualProjectInput, setManualProjectInput] = reactExports.useState(store.projectID);
+  const [selectedStatusId, setSelectedStatusId] = reactExports.useState("");
+  const [selectedAssignee, setSelectedAssignee] = reactExports.useState("");
+  const [keyword, setKeyword] = reactExports.useState("");
+  const [statusOptions, setStatusOptions] = reactExports.useState([]);
+  const [memberOptions, setMemberOptions] = reactExports.useState([]);
+  const [currentUser, setCurrentUser] = reactExports.useState(null);
   const reporter = new YunxiaoBugReporter(store.buildConfigurationForProjectListing());
   const loadProjects = async () => {
     setLoadingProjects(true);
@@ -2559,14 +2625,47 @@ const BugListView = () => {
       setLoadingProjects(false);
     }
   };
-  const loadWorkitems = async (targetPage = 1, append = false) => {
+  const loadFilterOptions = async (projId) => {
+    const targetProj = projId || store.projectID;
+    if (!targetProj) return;
+    try {
+      const rep = new YunxiaoBugReporter(store.buildConfiguration({ projectID: targetProj }));
+      const [membersResult, statusesResult, userResult] = await Promise.allSettled([
+        rep.listProjectMembers(),
+        rep.listWorkflowStatuses(store.workitemTypeID || void 0),
+        rep.getCurrentUser()
+      ]);
+      if (membersResult.status === "fulfilled") setMemberOptions(membersResult.value);
+      if (statusesResult.status === "fulfilled") setStatusOptions(statusesResult.value);
+      if (userResult.status === "fulfilled") setCurrentUser(userResult.value);
+    } catch {
+    }
+  };
+  const loadWorkitems = async (targetPage = 1, append = false, overrideFilters) => {
     if (!store.projectID) return;
     if (append) setLoadingMore(true);
     else setLoading(true);
     setError(null);
+    const stId = overrideFilters?.statusId !== void 0 ? overrideFilters.statusId : selectedStatusId;
+    const asId = overrideFilters?.assignedTo !== void 0 ? overrideFilters.assignedTo : selectedAssignee;
+    const kw = overrideFilters?.keyword !== void 0 ? overrideFilters.keyword : keyword;
+    let resolvedAssignee = void 0;
+    if (asId === "__ME__") {
+      resolvedAssignee = currentUser?.id || store.assignedTo || void 0;
+    } else if (asId) {
+      resolvedAssignee = asId;
+    }
+    const matchingStatus = statusOptions.find((s) => s.id === stId || s.name === stId);
+    const resolvedStatusName = matchingStatus?.name || matchingStatus?.displayName || (stId ? stId : void 0);
+    const filterPayload = {
+      statusId: stId || void 0,
+      statusName: resolvedStatusName,
+      assignedTo: resolvedAssignee,
+      keyword: kw.trim() || void 0
+    };
     try {
       const rep = new YunxiaoBugReporter(store.buildConfiguration());
-      const items = await rep.listWorkitems(targetPage, 20, "Bug");
+      const items = await rep.listWorkitems(targetPage, 20, "Bug", filterPayload);
       if (append) {
         setWorkitems((prev) => [...prev, ...items]);
         setPage(targetPage);
@@ -2582,12 +2681,20 @@ const BugListView = () => {
       setLoadingMore(false);
     }
   };
+  const handleResetFilters = () => {
+    setSelectedStatusId("");
+    setSelectedAssignee("");
+    setKeyword("");
+    loadWorkitems(1, false, { statusId: "", assignedTo: "", keyword: "" });
+  };
   reactExports.useEffect(() => {
     loadProjects();
+    loadFilterOptions();
     loadWorkitems(1, false);
   }, []);
   reactExports.useEffect(() => {
     if (store.projectID) {
+      loadFilterOptions(store.projectID);
       loadWorkitems(1, false);
     }
   }, [store.projectID]);
@@ -2619,6 +2726,7 @@ const BugListView = () => {
     }
     return "text-amber-700 bg-amber-50 border-amber-200";
   };
+  const hasActiveFilters = Boolean(selectedStatusId || selectedAssignee || keyword.trim());
   if (selectedItem) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       BugDetailView,
@@ -2713,6 +2821,7 @@ const BugListView = () => {
           type: "button",
           onClick: () => {
             loadProjects();
+            loadFilterOptions();
             loadWorkitems(1, false);
           },
           disabled: loading || !store.projectID,
@@ -2722,6 +2831,96 @@ const BugListView = () => {
         }
       )
     ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 py-2 bg-white border-b border-slate-200/80 space-y-1.5 shadow-2xs shrink-0", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex items-center", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { size: 13, className: "absolute left-2.5 text-slate-400 pointer-events-none" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            placeholder: "搜索 Bug 标题 / 编号...",
+            value: keyword,
+            onChange: (e) => setKeyword(e.target.value),
+            onKeyDown: (e) => {
+              if (e.key === "Enter") {
+                loadWorkitems(1, false, { keyword: e.currentTarget.value });
+              }
+            },
+            className: "w-full text-xs pl-7 pr-7 py-1.5 bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-blue-400 rounded-lg transition-all focus:outline-none placeholder:text-slate-400"
+          }
+        ),
+        keyword && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              setKeyword("");
+              loadWorkitems(1, false, { keyword: "" });
+            },
+            className: "absolute right-2 p-0.5 text-slate-400 hover:text-slate-600 rounded",
+            title: "清空搜索",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 12 })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5 text-xs", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: selectedStatusId,
+              onChange: (e) => {
+                const val = e.target.value;
+                setSelectedStatusId(val);
+                loadWorkitems(1, false, { statusId: val });
+              },
+              className: `w-full text-[11px] py-1 pl-2 pr-5 rounded-md border appearance-none truncate cursor-pointer transition-colors ${selectedStatusId ? "bg-blue-50 text-blue-700 border-blue-200 font-medium" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "全部状态" }),
+                statusOptions.map((st) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: st.id || st.name, children: st.displayName || st.name }, st.id || st.name))
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronDown, { size: 11, className: "absolute right-1.5 top-2 text-slate-400 pointer-events-none" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: selectedAssignee,
+              onChange: (e) => {
+                const val = e.target.value;
+                setSelectedAssignee(val);
+                loadWorkitems(1, false, { assignedTo: val });
+              },
+              className: `w-full text-[11px] py-1 pl-2 pr-5 rounded-md border appearance-none truncate cursor-pointer transition-colors ${selectedAssignee ? "bg-blue-50 text-blue-700 border-blue-200 font-medium" : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "全部负责人" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "__ME__", children: [
+                  "指派给我 ",
+                  currentUser?.name ? `(${currentUser.name})` : ""
+                ] }),
+                memberOptions.map((m) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: m.id, children: m.name }, m.id))
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronDown, { size: 11, className: "absolute right-1.5 top-2 text-slate-400 pointer-events-none" })
+        ] }),
+        hasActiveFilters && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: handleResetFilters,
+            className: "p-1 px-1.5 text-[11px] text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors shrink-0 flex items-center space-x-0.5",
+            title: "重置所有筛选",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(RotateCcw, { size: 10 }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "重置" })
+            ]
+          }
+        )
+      ] })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto p-3 space-y-2 pb-12", children: [
       error && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center space-x-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(CircleAlert, { size: 15 }),
@@ -2729,7 +2928,16 @@ const BugListView = () => {
       ] }),
       workitems.length === 0 && !loading && !error && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center p-12 text-slate-400 text-xs space-y-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(Flag, { size: 28, className: "text-slate-300 stroke-1" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: !store.projectID ? "请先选择项目" : "暂无 Bug 工作项" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: !store.projectID ? "请先选择项目" : hasActiveFilters ? "未找到符合筛选条件的 Bug" : "暂无 Bug 工作项" }),
+        hasActiveFilters && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleResetFilters,
+            className: "mt-1 px-2.5 py-1 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md font-medium transition-colors",
+            children: "清空筛选条件"
+          }
+        )
       ] }),
       workitems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
@@ -2977,54 +3185,120 @@ function compose(body, context) {
   const parts = [];
   const trimmed = body.trim();
   if (trimmed) parts.push(balanceFences(trimmed));
+  const diagnosticSection = composeDiagnostics(context);
+  if (diagnosticSection) {
+    parts.push(diagnosticSection);
+  }
+  if (context.recentActions && context.recentActions.length > 0) {
+    const actions = context.recentActions.slice(0, 15);
+    parts.push("## 用户操作轨迹 (复现参考)\n" + actions.map((a, i) => `${i + 1}. ${a}`).join("\n"));
+  }
   const envLines = descriptionLines(context);
-  parts.push("## 环境信息\n" + balanceFences(envLines.join("\n")));
+  parts.push("## 运行环境与设备\n" + balanceFences(envLines.join("\n")));
   if (context.recentRequests.length > 0) {
     const requests = context.recentRequests.slice(0, MAX_NETWORK_SUMMARIES);
     const sections = requests.map(networkDetail);
     const omitted = context.recentRequests.length - requests.length;
     if (omitted > 0) sections.push(`- 其余 ${omitted} 条网络请求未附带`);
-    parts.push("## 最近网络请求\n" + sections.join("\n\n---\n\n"));
+    parts.push("## 网络请求明细 (前 8 条)\n" + sections.join("\n\n---\n\n"));
   }
   return parts.join("\n\n");
 }
+function composeDiagnostics(ctx) {
+  const failedRequests = ctx.recentRequests.filter((r) => r.isFailed || r.statusCode && r.statusCode >= 400);
+  const errors = ctx.consoleBreadcrumbs || [];
+  const stringErrors = ctx.consoleErrors || [];
+  if (failedRequests.length === 0 && errors.length === 0 && stringErrors.length === 0) {
+    return null;
+  }
+  const lines = ["## 🚨 异常诊断发现"];
+  if (failedRequests.length > 0) {
+    lines.push(`### ⚠️ 失败网络请求 (${failedRequests.length} 个)`);
+    for (const req of failedRequests.slice(0, 5)) {
+      lines.push(`- **[HTTP ${req.statusCode || "ERR"}] ${req.method} ${req.path}** (耗时: ${req.durationMs}ms)`);
+      if (req.traceId) {
+        lines.push(`  - **Trace-ID**: \`${req.traceId}\``);
+      }
+      if (req.error) {
+        lines.push(`  - **错误提示**: ${req.error}`);
+      }
+      if (req.responseBody) {
+        lines.push("  - **响应数据**:\n" + fencedCodeBlock(req.responseBody.slice(0, 1500)));
+      }
+    }
+  }
+  if (errors.length > 0) {
+    const errorItems = errors.filter((e) => e.level === "error").slice(0, 5);
+    if (errorItems.length > 0) {
+      lines.push(`### 🔴 控制台报错与调用堆栈 (${errorItems.length} 个)`);
+      for (const err of errorItems) {
+        lines.push(`- **报错信息**: \`${err.message}\``);
+        if (err.stack) {
+          lines.push(fencedCodeBlock(err.stack.slice(0, 2e3)));
+        }
+      }
+    }
+  } else if (stringErrors.length > 0) {
+    lines.push(`### 🔴 控制台报错 (${stringErrors.length} 个)`);
+    for (const err of stringErrors.slice(0, 5)) {
+      lines.push(`- \`${err}\``);
+    }
+  }
+  return lines.join("\n\n");
+}
 function networkSummary(b, prefix = "- ") {
   const path = b.path.split("?")[0].split("#")[0];
-  let s = `${prefix}${compact(path)} · ${b.statusCode ?? "无状态码"} · ${b.durationMs}ms`;
+  let s = `${prefix}[${b.method}] ${compact(path)} · ${b.statusCode ?? "无状态码"} · ${b.durationMs}ms`;
+  if (b.traceId) s += ` · [Trace: ${b.traceId}]`;
   if (b.error) s += ` · 错误：${compact(b.error)}`;
   return s;
 }
 function descriptionLines(ctx) {
   const lines = [];
-  lines.push(`- 页面：${ctx.pageTitle || "未知"}`);
-  lines.push(`- URL：${ctx.pageURL || "未知"}`);
-  lines.push(`- 浏览器：${ctx.browserInfo || "未知"}`);
-  lines.push(`- 系统：${ctx.osInfo || "未知"}`);
-  lines.push(`- 视口：${ctx.viewportSize || "未知"}`);
-  lines.push(`- 网络：${ctx.networkStatus || "未知"}`);
-  lines.push(`- 截图：${ctx.screenshotCount} 张`);
+  lines.push(`- **页面**：${ctx.pageTitle || "未知"}`);
+  lines.push(`- **URL**：${ctx.pageURL || "未知"}`);
+  lines.push(`- **浏览器**：${ctx.browserInfo || "未知"}`);
+  lines.push(`- **系统**：${ctx.osInfo || "未知"}`);
+  lines.push(`- **视口与分辨率**：视口 ${ctx.viewportSize || "未知"}${ctx.screenResolution ? ` / 屏幕 ${ctx.screenResolution}` : ""}`);
+  if (ctx.colorScheme) lines.push(`- **色彩偏好**：${ctx.colorScheme} 模式`);
+  lines.push(`- **网络状态**：${ctx.networkStatus || "未知"}`);
+  lines.push(`- **截图数量**：${ctx.screenshotCount} 张`);
+  if (ctx.performanceMetrics) {
+    const p = ctx.performanceMetrics;
+    const perfParts = [];
+    if (p.ttfbMs != null) perfParts.push(`首包响应(TTFB) ${p.ttfbMs}ms`);
+    if (p.domContentLoadedMs != null) perfParts.push(`DOM就绪 ${p.domContentLoadedMs}ms`);
+    if (p.pageLoadMs != null) perfParts.push(`完全加载 ${p.pageLoadMs}ms`);
+    if (p.jsHeapUsedMb != null && p.jsHeapTotalMb != null) {
+      perfParts.push(`JS内存 ${p.jsHeapUsedMb}MB / ${p.jsHeapTotalMb}MB`);
+    }
+    if (perfParts.length > 0) {
+      lines.push(`- **页面性能指标**：${perfParts.join(" | ")}`);
+    }
+  }
   const d = new Date(ctx.timestamp);
-  lines.push(`- 时间：${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
-  if (ctx.recentActions.length > 0) {
-    lines.push(`- 最近操作：${ctx.recentActions.join(" →\n")}`);
-  }
-  if (ctx.consoleErrors.length > 0) {
-    lines.push(`- 控制台报错：${ctx.consoleErrors.slice(0, 5).join("; ")}`);
-  }
+  lines.push(`- **上报时间**：${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`);
   for (const [k, v] of Object.entries(ctx.supplementaryInfo ?? {})) {
-    lines.push(`- ${k}：${v}`);
+    lines.push(`- **${k}**：${v}`);
   }
   return lines;
 }
 function networkDetail(b) {
   const parts = [networkSummary(b)];
+  if (b.traceId) {
+    parts.push(`- **Trace-ID**: \`${b.traceId}\``);
+  }
+  if (b.requestHeaders && Object.keys(b.requestHeaders).length > 0) {
+    const hStr = Object.entries(b.requestHeaders).map(([k, v]) => `  ${k}: ${v}`).join("\n");
+    parts.push("请求头:\n" + fencedCodeBlock(hStr));
+  }
   if (!b.requestBody || b.requestBody.trim() === "" || b.requestBody.trim() === "{}") {
     parts.push("请求体：空");
   } else {
-    parts.push("请求体\n" + fencedCodeBlock(b.requestBody));
+    parts.push("请求体:\n" + fencedCodeBlock(b.requestBody));
   }
   if (b.responseBody && b.responseBody.trim()) {
-    parts.push("响应体\n" + fencedCodeBlock(b.responseBody));
+    parts.push("响应体:\n" + fencedCodeBlock(b.responseBody));
   }
   return parts.join("\n");
 }
@@ -3758,12 +4032,16 @@ ${res.expected_result}`);
         browserInfo: snapshot?.browserInfo || navigator.userAgent,
         osInfo: snapshot?.osInfo || "",
         viewportSize: snapshot?.viewportSize || "",
+        screenResolution: snapshot?.screenResolution,
+        colorScheme: snapshot?.colorScheme,
         networkStatus: snapshot?.networkStatus || "",
         screenshotCount: images.length,
         timestamp: snapshot?.timestamp || Date.now(),
         recentActions: snapshot?.recentActions || [],
         recentRequests: snapshot?.recentRequests || [],
         consoleErrors: snapshot?.consoleErrors || [],
+        consoleBreadcrumbs: snapshot?.consoleBreadcrumbs || [],
+        performanceMetrics: snapshot?.performanceMetrics,
         supplementaryInfo: {}
       };
       const composedDesc = compose(userDescription, bugContext);
@@ -4303,51 +4581,133 @@ ${res.expected_result}`);
               )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-2 border-t border-slate-100", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => setShowEnvDisclosure(!showEnvDisclosure),
-                  className: "flex items-center space-x-1 text-slate-500 hover:text-slate-800 text-[11px] font-medium",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Info, { size: 12 }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                      "自动采集环境信息 (",
-                      snapshot?.recentRequests.length || 0,
-                      " 条网络轨迹)"
-                    ] })
-                  ]
-                }
-              ),
-              showEnvDisclosure && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-2 bg-slate-50 rounded-lg text-[11px] text-slate-600 font-mono space-y-1 select-text", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  "页面: ",
-                  snapshot?.pageTitle || "-"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate", children: [
-                  "URL: ",
-                  snapshot?.pageURL || "-"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  "浏览器: ",
-                  snapshot?.browserInfo || "-"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  "网络: ",
-                  snapshot?.networkStatus || "-"
-                ] }),
-                snapshot?.recentRequests && snapshot.recentRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-1 mt-1 border-t border-slate-200", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-slate-700", children: "最近网络请求 (前 5 条):" }),
-                  snapshot.recentRequests.slice(0, 5).map((r, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setShowEnvDisclosure(!showEnvDisclosure),
+                    className: "flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 text-[11px] font-medium",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Info, { size: 13, className: "text-blue-500" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "自动采集环境与诊断" }),
+                      snapshot?.diagnostics?.failedRequestCount ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "px-1.5 py-0.2 bg-red-100 text-red-700 text-[10px] font-semibold rounded-full", children: [
+                        snapshot.diagnostics.failedRequestCount,
+                        " 接口异常"
+                      ] }) : null,
+                      snapshot?.diagnostics?.errorCount ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "px-1.5 py-0.2 bg-amber-100 text-amber-700 text-[10px] font-semibold rounded-full", children: [
+                        snapshot.diagnostics.errorCount,
+                        " 脚本报错"
+                      ] }) : null
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: requestPageSnapshot,
+                    className: "flex items-center space-x-1 text-slate-400 hover:text-blue-600 text-[10px] p-1 rounded transition-colors",
+                    title: "刷新当前活动页面的快照数据",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 11 }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "刷新快照" })
+                    ]
+                  }
+                )
+              ] }),
+              showEnvDisclosure && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 font-mono space-y-2 select-text", children: [
+                ((snapshot?.diagnostics?.failedRequestCount ?? 0) > 0 || (snapshot?.diagnostics?.errorCount ?? 0) > 0) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-2 bg-red-50/70 border border-red-200 rounded text-red-800 space-y-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold text-red-700 flex items-center space-x-1", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { size: 12 }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "已捕获的运行异常:" })
+                  ] }),
+                  snapshot?.recentRequests.filter((r) => r.isFailed || r.statusCode && r.statusCode >= 400).slice(0, 3).map((r, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate text-[10px]", children: [
+                    "• [HTTP ",
+                    r.statusCode || "ERR",
+                    "] ",
                     r.method,
                     " ",
-                    r.path.slice(0, 35),
+                    r.path.slice(0, 40),
+                    r.traceId ? ` (Trace: ${r.traceId.slice(0, 16)}…)` : ""
+                  ] }, i)),
+                  (snapshot?.consoleBreadcrumbs || []).filter((c) => c.level === "error").slice(0, 2).map((c, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate text-[10px] text-red-600", children: [
+                    "• [Console] ",
+                    c.message.slice(0, 50)
+                  ] }, i))
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-0.5 text-[10px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    "页面: ",
+                    snapshot?.pageTitle || "-"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate", children: [
+                    "URL: ",
+                    snapshot?.pageURL || "-"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    "环境: ",
+                    snapshot?.browserInfo || "-",
                     " · ",
-                    r.statusCode || "ERR",
-                    " · ",
-                    r.durationMs,
-                    "ms"
+                    snapshot?.osInfo || "-"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    "视口: ",
+                    snapshot?.viewportSize || "-",
+                    " · 屏幕 ",
+                    snapshot?.screenResolution || "-",
+                    " (",
+                    snapshot?.colorScheme || "Light",
+                    ")"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    "网络: ",
+                    snapshot?.networkStatus || "-"
+                  ] }),
+                  snapshot?.performanceMetrics && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-slate-500 pt-0.5", children: [
+                    "性能: DOM ",
+                    snapshot.performanceMetrics.domContentLoadedMs ?? "-",
+                    "ms · 加载 ",
+                    snapshot.performanceMetrics.pageLoadMs ?? "-",
+                    "ms · TTFB ",
+                    snapshot.performanceMetrics.ttfbMs ?? "-",
+                    "ms",
+                    snapshot.performanceMetrics.jsHeapUsedMb != null && ` · 内存 ${snapshot.performanceMetrics.jsHeapUsedMb}MB`
+                  ] })
+                ] }),
+                snapshot?.recentActions && snapshot.recentActions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-1.5 border-t border-slate-200", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-slate-700 text-[10px] mb-0.5", children: "用户操作轨迹 (前 3 条):" }),
+                  snapshot.recentActions.slice(0, 3).map((act, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate text-slate-500 text-[10px]", children: [
+                    idx + 1,
+                    ". ",
+                    act
                   ] }, idx))
+                ] }),
+                snapshot?.recentRequests && snapshot.recentRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-1.5 border-t border-slate-200", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold text-slate-700 text-[10px] mb-0.5", children: [
+                    "网络请求 (",
+                    snapshot.recentRequests.length,
+                    " 条，展示前 5 条):"
+                  ] }),
+                  snapshot.recentRequests.slice(0, 5).map((r, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "div",
+                    {
+                      className: `truncate text-[10px] py-0.5 ${r.isFailed ? "text-red-600 font-medium" : "text-slate-600"}`,
+                      children: [
+                        "[",
+                        r.method,
+                        "] ",
+                        r.path.slice(0, 32),
+                        " · ",
+                        r.statusCode || "ERR",
+                        " · ",
+                        r.durationMs,
+                        "ms",
+                        r.traceId ? ` [Trace: ${r.traceId.slice(0, 10)}…]` : ""
+                      ]
+                    },
+                    idx
+                  ))
                 ] })
               ] })
             ] })

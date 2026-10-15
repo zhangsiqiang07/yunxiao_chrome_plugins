@@ -453,12 +453,16 @@ export const SubmitView: React.FC = () => {
         browserInfo: snapshot?.browserInfo || navigator.userAgent,
         osInfo: snapshot?.osInfo || '',
         viewportSize: snapshot?.viewportSize || '',
+        screenResolution: snapshot?.screenResolution,
+        colorScheme: snapshot?.colorScheme,
         networkStatus: snapshot?.networkStatus || '',
         screenshotCount: images.length,
         timestamp: snapshot?.timestamp || Date.now(),
         recentActions: snapshot?.recentActions || [],
         recentRequests: snapshot?.recentRequests || [],
         consoleErrors: snapshot?.consoleErrors || [],
+        consoleBreadcrumbs: snapshot?.consoleBreadcrumbs || [],
+        performanceMetrics: snapshot?.performanceMetrics,
         supplementaryInfo: {},
       };
 
@@ -1026,29 +1030,104 @@ export const SubmitView: React.FC = () => {
                 />
               </div>
 
-              {/* 环境与网络信息 */}
+              {/* 环境、网络与异常诊断信息 */}
               <div className="pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowEnvDisclosure(!showEnvDisclosure)}
-                  className="flex items-center space-x-1 text-slate-500 hover:text-slate-800 text-[11px] font-medium"
-                >
-                  <Info size={12} />
-                  <span>自动采集环境信息 ({snapshot?.recentRequests.length || 0} 条网络轨迹)</span>
-                </button>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setShowEnvDisclosure(!showEnvDisclosure)}
+                    className="flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 text-[11px] font-medium"
+                  >
+                    <Info size={13} className="text-blue-500" />
+                    <span>自动采集环境与诊断</span>
+                    {snapshot?.diagnostics?.failedRequestCount ? (
+                      <span className="px-1.5 py-0.2 bg-red-100 text-red-700 text-[10px] font-semibold rounded-full">
+                        {snapshot.diagnostics.failedRequestCount} 接口异常
+                      </span>
+                    ) : null}
+                    {snapshot?.diagnostics?.errorCount ? (
+                      <span className="px-1.5 py-0.2 bg-amber-100 text-amber-700 text-[10px] font-semibold rounded-full">
+                        {snapshot.diagnostics.errorCount} 脚本报错
+                      </span>
+                    ) : null}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={requestPageSnapshot}
+                    className="flex items-center space-x-1 text-slate-400 hover:text-blue-600 text-[10px] p-1 rounded transition-colors"
+                    title="刷新当前活动页面的快照数据"
+                  >
+                    <RefreshCw size={11} />
+                    <span>刷新快照</span>
+                  </button>
+                </div>
 
                 {showEnvDisclosure && (
-                  <div className="mt-2 p-2 bg-slate-50 rounded-lg text-[11px] text-slate-600 font-mono space-y-1 select-text">
-                    <div>页面: {snapshot?.pageTitle || '-'}</div>
-                    <div className="truncate">URL: {snapshot?.pageURL || '-'}</div>
-                    <div>浏览器: {snapshot?.browserInfo || '-'}</div>
-                    <div>网络: {snapshot?.networkStatus || '-'}</div>
+                  <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 font-mono space-y-2 select-text">
+                    {/* 1. 异常诊断专区 (若有报错即显示) */}
+                    {((snapshot?.diagnostics?.failedRequestCount ?? 0) > 0 || (snapshot?.diagnostics?.errorCount ?? 0) > 0) && (
+                      <div className="p-2 bg-red-50/70 border border-red-200 rounded text-red-800 space-y-1">
+                        <div className="font-semibold text-red-700 flex items-center space-x-1">
+                          <AlertTriangle size={12} />
+                          <span>已捕获的运行异常:</span>
+                        </div>
+                        {snapshot?.recentRequests.filter(r => r.isFailed || (r.statusCode && r.statusCode >= 400)).slice(0, 3).map((r, i) => (
+                          <div key={i} className="truncate text-[10px]">
+                            • [HTTP {r.statusCode || 'ERR'}] {r.method} {r.path.slice(0, 40)}
+                            {r.traceId ? ` (Trace: ${r.traceId.slice(0, 16)}…)` : ''}
+                          </div>
+                        ))}
+                        {(snapshot?.consoleBreadcrumbs || []).filter(c => c.level === 'error').slice(0, 2).map((c, i) => (
+                          <div key={i} className="truncate text-[10px] text-red-600">
+                            • [Console] {c.message.slice(0, 50)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 2. 基本环境与性能 */}
+                    <div className="space-y-0.5 text-[10px]">
+                      <div>页面: {snapshot?.pageTitle || '-'}</div>
+                      <div className="truncate">URL: {snapshot?.pageURL || '-'}</div>
+                      <div>环境: {snapshot?.browserInfo || '-'} · {snapshot?.osInfo || '-'}</div>
+                      <div>视口: {snapshot?.viewportSize || '-'} · 屏幕 {snapshot?.screenResolution || '-'} ({snapshot?.colorScheme || 'Light'})</div>
+                      <div>网络: {snapshot?.networkStatus || '-'}</div>
+                      {snapshot?.performanceMetrics && (
+                        <div className="text-slate-500 pt-0.5">
+                          性能: DOM {snapshot.performanceMetrics.domContentLoadedMs ?? '-'}ms · 加载 {snapshot.performanceMetrics.pageLoadMs ?? '-'}ms · TTFB {snapshot.performanceMetrics.ttfbMs ?? '-'}ms
+                          {snapshot.performanceMetrics.jsHeapUsedMb != null && ` · 内存 ${snapshot.performanceMetrics.jsHeapUsedMb}MB`}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3. 最近用户操作轨迹 */}
+                    {snapshot?.recentActions && snapshot.recentActions.length > 0 && (
+                      <div className="pt-1.5 border-t border-slate-200">
+                        <div className="font-semibold text-slate-700 text-[10px] mb-0.5">用户操作轨迹 (前 3 条):</div>
+                        {snapshot.recentActions.slice(0, 3).map((act, idx) => (
+                          <div key={idx} className="truncate text-slate-500 text-[10px]">
+                            {idx + 1}. {act}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 4. 最近网络请求 */}
                     {snapshot?.recentRequests && snapshot.recentRequests.length > 0 && (
-                      <div className="pt-1 mt-1 border-t border-slate-200">
-                        <div className="font-semibold text-slate-700">最近网络请求 (前 5 条):</div>
+                      <div className="pt-1.5 border-t border-slate-200">
+                        <div className="font-semibold text-slate-700 text-[10px] mb-0.5">
+                          网络请求 ({snapshot.recentRequests.length} 条，展示前 5 条):
+                        </div>
                         {snapshot.recentRequests.slice(0, 5).map((r, idx) => (
-                          <div key={idx} className="truncate">
-                            {r.method} {r.path.slice(0, 35)} · {r.statusCode || 'ERR'} · {r.durationMs}ms
+                          <div
+                            key={idx}
+                            className={`truncate text-[10px] py-0.5 ${
+                              r.isFailed ? 'text-red-600 font-medium' : 'text-slate-600'
+                            }`}
+                          >
+                            [{r.method}] {r.path.slice(0, 32)} · {r.statusCode || 'ERR'} · {r.durationMs}ms
+                            {r.traceId ? ` [Trace: ${r.traceId.slice(0, 10)}…]` : ''}
                           </div>
                         ))}
                       </div>

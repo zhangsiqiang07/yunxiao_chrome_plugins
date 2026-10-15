@@ -3,7 +3,7 @@ import { descriptionFormatApiValue, type YXBDescriptionFormat } from '../models/
 import type { YXBBugReport } from '../models/YXBBugReport';
 import type {
   YXBWorkitemType, YXBMember, YXBProject, YXBCurrentUser,
-  YXBWorkitem, YXBFieldDefinition, YXBWorkflowStatus,
+  YXBWorkitem, YXBFieldDefinition, YXBWorkflowStatus, YXBWorkitemFilter,
 } from '../models/YXBWorkitemModels';
 import { YXBHTTPClient } from './YXBHTTPClient';
 
@@ -208,16 +208,87 @@ export class YXBWorkitemService {
     return items.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }
 
-  async fetchWorkitems(page: number, perPage: number, category: string, token: string): Promise<YXBWorkitem[]> {
+  async fetchWorkitems(
+    page: number,
+    perPage: number,
+    category: string,
+    token: string,
+    filter?: YXBWorkitemFilter,
+  ): Promise<YXBWorkitem[]> {
+    const body: Record<string, any> = {
+      category,
+      spaceId: (this.config.projectID ?? '').trim(),
+      spaceType: 'Project',
+      orderBy: 'gmtCreate',
+      page,
+      perPage,
+      sort: 'desc',
+    };
+
+    const conditionItems: any[] = [];
+
+    // 1. 状态筛选（支持按 statusId 过滤）
+    if (filter?.statusId) {
+      conditionItems.push({
+        fieldIdentifier: 'status',
+        operator: 'CONTAINS',
+        value: [filter.statusId],
+        toValue: null,
+        className: 'status',
+        format: 'list',
+      });
+    }
+
+    // 2. 负责人筛选（支持按负责人 userId 过滤）
+    if (filter?.assignedTo) {
+      conditionItems.push({
+        fieldIdentifier: 'assignedTo',
+        operator: 'CONTAINS',
+        value: [filter.assignedTo],
+        toValue: null,
+        className: 'user',
+        format: 'list',
+      });
+    }
+
+    // 3. 关键词/标题筛选
+    if (filter?.keyword && filter.keyword.trim()) {
+      conditionItems.push({
+        fieldIdentifier: 'subject',
+        operator: 'CONTAINS',
+        value: [filter.keyword.trim()],
+        toValue: null,
+        className: 'string',
+        format: 'input',
+      });
+    }
+
+    if (conditionItems.length > 0) {
+      body.conditions = JSON.stringify({
+        conditionGroups: [conditionItems],
+      });
+    }
+
     const resp = await this.client.send<any>(
-      this.config, { kind: 'workitemsSearch' }, 'POST', token, undefined,
-      {
-        category, spaceId: (this.config.projectID ?? '').trim(), spaceType: 'Project',
-        orderBy: 'gmtCreate', page, perPage, sort: 'desc',
-      },
+      this.config, { kind: 'workitemsSearch' }, 'POST', token, undefined, body,
     );
     const list = extractList(resp, 'workitems', 'data', 'items', 'list', 'result');
-    return list.map(normalizeWorkitem).filter(w => w.id);
+    let items = list.map(normalizeWorkitem).filter(w => w.id);
+
+    // 客户端后备防御式过滤（兼容特定云效网关版本未支持 conditions 的情况）
+    if (filter?.statusName) {
+      items = items.filter(w => !w.statusName || w.statusName === filter.statusName);
+    }
+    if (filter?.keyword && filter.keyword.trim()) {
+      const kw = filter.keyword.trim().toLowerCase();
+      items = items.filter(w =>
+        (w.subject && w.subject.toLowerCase().includes(kw)) ||
+        (w.id && w.id.toLowerCase().includes(kw)) ||
+        (w.serialNumber && String(w.serialNumber).toLowerCase().includes(kw))
+      );
+    }
+
+    return items;
   }
 
   async createWorkitem(report: YXBBugReport, workitemTypeID: string, token: string): Promise<string> {

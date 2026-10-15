@@ -69,6 +69,14 @@ export interface YXBWorkflowStatus {
   stageName?: string;
 }
 
+/** 工作项搜索过滤条件 */
+export interface YXBWorkitemFilter {
+  statusId?: string;
+  statusName?: string;
+  assignedTo?: string;
+  keyword?: string;
+}
+
 /** 字段定义 */
 export interface YXBFieldDefinition {
   id: string;

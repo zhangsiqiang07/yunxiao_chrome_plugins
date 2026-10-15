@@ -9,6 +9,7 @@ import type {
   YXBWorkitem,
   YXBWorkitemType,
   YXBWorkflowStatus,
+  YXBWorkitemFilter,
 } from '../models/YXBWorkitemModels';
 import { YXBAttachmentService } from './YXBAttachmentService';
 import { embedAttachments } from './YXBDescriptionEmbedder';
@@ -233,9 +234,14 @@ export class YunxiaoBugReporter {
     return this.withRetry(token => this.workitemService!.fetchTypeFields(workitemTypeID, token));
   }
 
-  public async listWorkitems(page = 1, perPage = 20, category = 'Bug'): Promise<YXBWorkitem[]> {
+  public async listWorkitems(
+    page = 1,
+    perPage = 20,
+    category = 'Bug',
+    filter?: YXBWorkitemFilter,
+  ): Promise<YXBWorkitem[]> {
     if (!this.workitemService) throw YXBError.notConfigured();
-    return this.withRetry(token => this.workitemService!.fetchWorkitems(page, perPage, category, token));
+    return this.withRetry(token => this.workitemService!.fetchWorkitems(page, perPage, category, token, filter));
   }
 
   public async getWorkitem(workitemID: string): Promise<YXBWorkitem> {
