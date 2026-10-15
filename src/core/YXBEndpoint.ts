@@ -16,24 +16,26 @@ export type EndpointType =
 
 function base(config: YXBConfiguration): string {
   if (config.edition === 'standard') {
-    return `/oapi/v1/projex/organizations/${config.organizationID ?? ''}`;
+    const org = (config.organizationID ?? '').trim();
+    return `/oapi/v1/projex/organizations/${org}`;
   }
   return '/oapi/v1/projex';
 }
 
 /** 生成 API 路径（不含域名、不含 query） */
 export function endpointPath(ep: EndpointType, config: YXBConfiguration): string {
+  const proj = (config.projectID ?? '').trim();
   switch (ep.kind) {
     case 'currentUser':
       return '/oapi/v1/platform/user';
     case 'workitemTypes':
-      return `${base(config)}/projects/${config.projectID}/workitemTypes`;
+      return `${base(config)}/projects/${proj}/workitemTypes`;
     case 'workitemTypeFields':
-      return `${base(config)}/projects/${config.projectID}/workitemTypes/${ep.workitemTypeId}/fields`;
+      return `${base(config)}/projects/${proj}/workitemTypes/${ep.workitemTypeId}/fields`;
     case 'createWorkitem':
       return `${base(config)}/workitems`;
     case 'projectMembers':
-      return `${base(config)}/projects/${config.projectID}/members`;
+      return `${base(config)}/projects/${proj}/members`;
     case 'projects':
       return `${base(config)}/projects:search`;
     case 'workitemsSearch':

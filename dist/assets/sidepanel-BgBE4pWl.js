@@ -845,6 +845,24 @@ const List = createLucideIcon("List", [
  */
 
 
+const Pen = createLucideIcon("Pen", [
+  [
+    "path",
+    {
+      d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z",
+      key: "1a8usu"
+    }
+  ]
+]);
+
+/**
+ * @license lucide-react v0.460.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+
+
 const RefreshCw = createLucideIcon("RefreshCw", [
   ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
   ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
@@ -1077,22 +1095,24 @@ class YXBError extends Error {
 
 function base(config) {
   if (config.edition === "standard") {
-    return `/oapi/v1/projex/organizations/${config.organizationID ?? ""}`;
+    const org = (config.organizationID ?? "").trim();
+    return `/oapi/v1/projex/organizations/${org}`;
   }
   return "/oapi/v1/projex";
 }
 function endpointPath(ep, config) {
+  const proj = (config.projectID ?? "").trim();
   switch (ep.kind) {
     case "currentUser":
       return "/oapi/v1/platform/user";
     case "workitemTypes":
-      return `${base(config)}/projects/${config.projectID}/workitemTypes`;
+      return `${base(config)}/projects/${proj}/workitemTypes`;
     case "workitemTypeFields":
-      return `${base(config)}/projects/${config.projectID}/workitemTypes/${ep.workitemTypeId}/fields`;
+      return `${base(config)}/projects/${proj}/workitemTypes/${ep.workitemTypeId}/fields`;
     case "createWorkitem":
       return `${base(config)}/workitems`;
     case "projectMembers":
-      return `${base(config)}/projects/${config.projectID}/members`;
+      return `${base(config)}/projects/${proj}/members`;
     case "projects":
       return `${base(config)}/projects:search`;
     case "workitemsSearch":
@@ -1266,13 +1286,127 @@ function descriptionFormatApiValue(f) {
   return f === "markdown" ? "MARKDOWN" : "RICHTEXT";
 }
 
+function extractList(resp, ...keys) {
+  if (!resp) return [];
+  if (Array.isArray(resp)) return resp;
+  for (const k of keys) {
+    if (Array.isArray(resp[k])) return resp[k];
+    if (resp[k] && typeof resp[k] === "object") {
+      if (Array.isArray(resp[k].items)) return resp[k].items;
+      if (Array.isArray(resp[k].list)) return resp[k].list;
+      if (Array.isArray(resp[k].data)) return resp[k].data;
+      if (Array.isArray(resp[k].result)) return resp[k].result;
+      if (Array.isArray(resp[k].projects)) return resp[k].projects;
+      if (Array.isArray(resp[k].members)) return resp[k].members;
+      if (Array.isArray(resp[k].workitems)) return resp[k].workitems;
+    }
+  }
+  if (Array.isArray(resp.items)) return resp.items;
+  if (Array.isArray(resp.list)) return resp.list;
+  if (Array.isArray(resp.data)) return resp.data;
+  if (Array.isArray(resp.result)) return resp.result;
+  if (Array.isArray(resp.projects)) return resp.projects;
+  if (Array.isArray(resp.members)) return resp.members;
+  if (Array.isArray(resp.workitems)) return resp.workitems;
+  if (Array.isArray(resp.records)) return resp.records;
+  return [];
+}
+function normalizeProject(item) {
+  if (!item) return { id: "", name: "" };
+  const id = item.id || item.identifier || item.projectId || item.projectIdentifier || item.spaceId || item.spaceIdentifier || "";
+  const name = item.name || item.nameCn || item.displayName || item.projectName || item.subject || id;
+  let createdAt;
+  if (typeof item.gmtCreate === "number") {
+    createdAt = item.gmtCreate;
+  } else if (typeof item.gmtCreate === "string" && item.gmtCreate) {
+    const num = Number(item.gmtCreate);
+    if (!isNaN(num)) createdAt = num;
+  } else if (typeof item.createdAt === "number") {
+    createdAt = item.createdAt;
+  } else if (typeof item.createdAt === "string" && item.createdAt) {
+    const num = Number(item.createdAt);
+    if (!isNaN(num)) createdAt = num;
+  }
+  return {
+    id: String(id),
+    name: String(name),
+    createdAt,
+    customCode: item.customCode,
+    logicalStatus: item.logicalStatus
+  };
+}
+function normalizeMember(item) {
+  if (!item) return { id: "", name: "" };
+  const id = item.id || item.identifier || item.userId || item.userIdentifier || item.accountId || item.account || "";
+  const name = item.displayName || item.userName || item.displayRealName || item.displayNickName || item.name || item.realName || item.nickName || item.nickname || item.account || item.loginName || id;
+  return { id: String(id), name: String(name) };
+}
+function normalizeWorkitemType(item) {
+  if (!item) return { id: "", name: "" };
+  const id = item.id || item.identifier || item.workitemTypeId || item.typeId || "";
+  const name = item.name || item.nameCn || item.displayName || "";
+  const category = item.category || "";
+  const enabled = item.enabled !== false;
+  const isDefault = Boolean(item.isDefault || item.defaultType);
+  return { id: String(id), name: String(name), category, enabled, isDefault };
+}
+function normalizeWorkitem(item) {
+  if (!item) return { id: "", subject: "" };
+  const id = item.identifier || item.id || item.workitemId || item.workitemIdentifier || "";
+  const subject = item.subject || item.title || item.name || "";
+  const resolveName = (val) => {
+    if (!val) return void 0;
+    if (typeof val === "string") return val;
+    if (typeof val === "object") return val.displayName || val.name || val.resolved || void 0;
+    return void 0;
+  };
+  const statusName = resolveName(item.status) || item.statusName;
+  const assignedToName = resolveName(item.assignedTo) || item.assignedToName;
+  const priorityName = resolveName(item.priority) || item.priorityName;
+  const severityName = resolveName(item.severity) || item.severityName;
+  const creatorName = resolveName(item.creator) || item.creatorName;
+  const spaceName = resolveName(item.space) || resolveName(item.project) || item.spaceName;
+  let gmtCreate;
+  if (typeof item.gmtCreate === "number") gmtCreate = item.gmtCreate;
+  else if (item.gmtCreate) {
+    const n = Number(item.gmtCreate);
+    if (!isNaN(n)) gmtCreate = n;
+  }
+  let gmtModified;
+  if (typeof item.gmtModified === "number") gmtModified = item.gmtModified;
+  else if (item.gmtModified) {
+    const n = Number(item.gmtModified);
+    if (!isNaN(n)) gmtModified = n;
+  }
+  return {
+    id: String(id),
+    subject: String(subject),
+    statusName,
+    assignedToName,
+    priorityName,
+    severityName,
+    creatorName,
+    spaceName,
+    description: item.description,
+    serialNumber: item.serialNumber,
+    gmtCreate,
+    gmtModified
+  };
+}
 class YXBWorkitemService {
   constructor(config) {
     this.config = config;
   }
   client = new YXBHTTPClient();
   async fetchCurrentUser(token) {
-    return this.client.send(this.config, { kind: "currentUser" }, "GET", token);
+    const resp = await this.client.send(this.config, { kind: "currentUser" }, "GET", token);
+    const data = resp.data || resp.result || resp.user || resp;
+    return {
+      id: data.id || data.identifier || data.userId || data.aliyunPk || "",
+      name: data.displayName || data.name || data.username || data.loginName || data.id || "",
+      username: data.username || data.loginName || "",
+      aliyunPk: data.aliyunPk || ""
+    };
   }
   async fetchBugTypes(token) {
     const resp = await this.client.send(
@@ -1282,7 +1416,8 @@ class YXBWorkitemService {
       token,
       { category: "Bug" }
     );
-    return resp.workitemTypes ?? resp.items ?? resp.result ?? [];
+    const list = extractList(resp, "workitemTypes", "data", "items", "result", "list");
+    return list.map(normalizeWorkitemType).filter((t) => t.id);
   }
   async fetchTypeFields(workitemTypeId, token) {
     const resp = await this.client.send(
@@ -1291,7 +1426,21 @@ class YXBWorkitemService {
       "GET",
       token
     );
-    return resp.fields ?? resp.items ?? resp.result ?? [];
+    const list = extractList(resp, "fields", "data", "items", "result");
+    return list.map((f) => ({
+      id: f.id || f.identifier || "",
+      name: f.name || f.displayName || "",
+      format: f.format || "",
+      type: f.type || "",
+      required: Boolean(f.required),
+      showWhenCreate: f.showWhenCreate !== false,
+      defaultValue: f.defaultValue,
+      options: (f.options || []).map((o) => ({
+        id: o.id || o.value || "",
+        value: o.value || o.id || "",
+        displayValue: o.displayValue || o.value || o.name || ""
+      }))
+    })).filter((f) => f.id);
   }
   async fetchProjectMembers(token) {
     const resp = await this.client.send(
@@ -1300,18 +1449,30 @@ class YXBWorkitemService {
       "GET",
       token
     );
-    return resp.members ?? resp.items ?? resp.result ?? [];
+    const list = extractList(resp, "members", "data", "items", "list", "projectMembers", "result");
+    return list.map(normalizeMember).filter((m) => m.id);
   }
-  async fetchOrganizationProjects(token) {
+  async fetchOrganizationProjects(token, keyword) {
+    const body = {
+      orderBy: "gmtCreate",
+      page: 1,
+      perPage: 100,
+      sort: "desc"
+    };
+    if (keyword && keyword.trim()) {
+      body.name = keyword.trim();
+      body.keyword = keyword.trim();
+    }
     const resp = await this.client.send(
       this.config,
       { kind: "projects" },
       "POST",
       token,
       void 0,
-      { orderBy: "gmtCreate", page: 1, perPage: 50, sort: "desc" }
+      body
     );
-    const items = resp.projects ?? resp.items ?? resp.result ?? [];
+    const rawList = extractList(resp, "projects", "data", "items", "list", "result", "records");
+    const items = rawList.map(normalizeProject).filter((p) => p.id);
     return items.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }
   async fetchWorkitems(page, perPage, category, token) {
@@ -1323,7 +1484,7 @@ class YXBWorkitemService {
       void 0,
       {
         category,
-        spaceId: this.config.projectID,
+        spaceId: (this.config.projectID ?? "").trim(),
         spaceType: "Project",
         orderBy: "gmtCreate",
         page,
@@ -1331,11 +1492,12 @@ class YXBWorkitemService {
         sort: "desc"
       }
     );
-    return resp.workitems ?? resp.items ?? resp.result ?? [];
+    const list = extractList(resp, "workitems", "data", "items", "list", "result");
+    return list.map(normalizeWorkitem).filter((w) => w.id);
   }
   async createWorkitem(report, workitemTypeID, token) {
     const body = {
-      spaceId: this.config.projectID,
+      spaceId: (this.config.projectID ?? "").trim(),
       workitemTypeId: workitemTypeID,
       subject: report.title,
       assignedTo: report.assignedTo ?? this.config.assignedTo,
@@ -1356,7 +1518,7 @@ class YXBWorkitemService {
       void 0,
       body
     );
-    return resp.workitemId ?? resp.id ?? resp.identifier ?? "";
+    return resp.workitemId ?? resp.id ?? resp.identifier ?? resp.workItemId ?? "";
   }
   async updateWorkitemDescription(workitemID, description, format, token) {
     await this.client.sendNoContent(
@@ -1374,7 +1536,8 @@ class YXBWorkitemService {
       "GET",
       token
     );
-    return resp.workitem ?? resp.data ?? resp.result ?? resp;
+    const data = resp.workitem ?? resp.data ?? resp.result ?? resp;
+    return normalizeWorkitem(data);
   }
   async fetchWorkitemFileURL(workitemId, fileId, token) {
     const resp = await this.client.send(
@@ -1383,7 +1546,7 @@ class YXBWorkitemService {
       "GET",
       token
     );
-    return resp.url ?? "";
+    return resp.url ?? resp.data?.url ?? "";
   }
 }
 
@@ -1490,6 +1653,10 @@ class YunxiaoBugReporter {
     }
   }
   async performSubmit(report, forceRefresh = false) {
+    const projId = (this.config?.projectID ?? "").trim();
+    if (!projId || projId === "PLACEHOLDER_NOT_USED") {
+      throw YXBError.invalidConfiguration("未指定所属项目 ID，请先选择或输入项目 ID");
+    }
     const token = await this.fetchToken(forceRefresh);
     const workitemTypeID = await this.resolveWorkitemTypeID(token);
     const workitemID = await this.workitemService.createWorkitem(report, workitemTypeID, token);
@@ -1551,9 +1718,9 @@ class YunxiaoBugReporter {
     if (!this.workitemService) throw YXBError.notConfigured();
     return this.withRetry((token) => this.workitemService.fetchProjectMembers(token));
   }
-  async listOrganizationProjects() {
+  async listOrganizationProjects(keyword) {
     if (!this.workitemService) throw YXBError.notConfigured();
-    return this.withRetry((token) => this.workitemService.fetchOrganizationProjects(token));
+    return this.withRetry((token) => this.workitemService.fetchOrganizationProjects(token, keyword));
   }
   async listWorkitemTypeFields(workitemTypeID) {
     if (!this.workitemService) throw YXBError.notConfigured();
@@ -1762,17 +1929,17 @@ const useConfigStore = create((set, get) => ({
     const trimmed = state.token.trim();
     return trimmed.length > 0 ? trimmed : state.defaultToken;
   },
-  buildConfiguration: () => {
+  buildConfiguration: (overrides) => {
     const state = get();
     const token = state.resolvedToken();
     let cache;
     if (state.cacheEnabled) {
       cache = state.cacheBackend === "chromeStorage" ? new YXBChromeStorageCache() : new YXBInMemoryCache();
     }
-    return {
-      domain: state.domain,
+    const baseConfig = {
+      domain: state.domain.trim(),
       edition: state.edition,
-      organizationID: state.organizationID,
+      organizationID: state.organizationID.trim(),
       projectID: state.projectID.trim(),
       workitemTypeID: state.workitemTypeID.trim() || void 0,
       assignedTo: state.assignedTo.trim(),
@@ -1781,17 +1948,18 @@ const useConfigStore = create((set, get) => ({
       workitemTypeCacheTTL: state.workitemTypeCacheTTL,
       tokenCacheTTL: state.tokenCacheTTL
     };
+    return { ...baseConfig, ...overrides };
   },
-  buildConfigurationForProjectListing: () => {
-    const base = get().buildConfiguration();
+  buildConfigurationForProjectListing: (overrides) => {
+    const base = get().buildConfiguration(overrides);
     return {
       ...base,
       projectID: base.projectID || "PLACEHOLDER_NOT_USED",
       assignedTo: base.assignedTo || "PLACEHOLDER_NOT_USED"
     };
   },
-  buildConfigurationForMemberListing: () => {
-    const base = get().buildConfiguration();
+  buildConfigurationForMemberListing: (overrideProjId) => {
+    const base = get().buildConfiguration(overrideProjId ? { projectID: overrideProjId.trim() } : void 0);
     return {
       ...base,
       assignedTo: base.assignedTo || "PLACEHOLDER_NOT_USED"
@@ -2155,28 +2323,96 @@ const BugListView = () => {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(BugDetailView, { item: selectedItem, onBack: () => setSelectedItem(null) });
   }
   projectOptions.find((p) => p.id === store.projectID)?.name || store.projectID || "选择项目";
+  const [isEditingProject, setIsEditingProject] = reactExports.useState(false);
+  const [manualProjectInput, setManualProjectInput] = reactExports.useState(store.projectID);
+  const handleApplyManualProject = () => {
+    const val = manualProjectInput.trim();
+    store.setField("projectID", val);
+    store.save();
+    setIsEditingProject(false);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-slate-50 overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-white border-b border-slate-200", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5 flex-1 min-w-0 mr-2", children: [
+      isEditingProject ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 flex-1 mr-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            placeholder: "输入项目 ID",
+            value: manualProjectInput,
+            onChange: (e) => setManualProjectInput(e.target.value),
+            onKeyDown: (e) => {
+              if (e.key === "Enter") handleApplyManualProject();
+              if (e.key === "Escape") setIsEditingProject(false);
+            },
+            autoFocus: true,
+            className: "flex-1 text-xs px-2 py-1 bg-slate-50 border border-slate-300 rounded font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleApplyManualProject,
+            className: "p-1 text-emerald-600 hover:text-emerald-700",
+            title: "确定",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { size: 14 })
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setIsEditingProject(false),
+            className: "p-1 text-slate-400 hover:text-slate-600",
+            title: "取消",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { size: 14 })
+          }
+        )
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5 flex-1 min-w-0 mr-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "select",
           {
             value: store.projectID,
-            onChange: (e) => store.setField("projectID", e.target.value),
+            onChange: (e) => {
+              const val = e.target.value;
+              store.setField("projectID", val);
+              store.save();
+            },
             className: "text-xs font-semibold text-slate-800 bg-transparent border-none focus:outline-none truncate cursor-pointer pr-4",
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "选择项目" }),
+              store.projectID && !projectOptions.some((p) => p.id === store.projectID) && /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: store.projectID, children: [
+                store.projectID,
+                " (指定项目)"
+              ] }),
               projectOptions.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.name || p.id }, p.id))
             ]
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronDown, { size: 13, className: "text-slate-400 shrink-0 -ml-3 pointer-events-none" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronDown, { size: 13, className: "text-slate-400 shrink-0 -ml-3 pointer-events-none" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              setManualProjectInput(store.projectID);
+              setIsEditingProject(true);
+            },
+            className: "p-1 text-slate-400 hover:text-blue-600 rounded transition-colors",
+            title: "手动输入项目 ID",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Pen, { size: 12 })
+          }
+        )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           type: "button",
-          onClick: () => loadWorkitems(1, false),
+          onClick: () => {
+            loadProjects();
+            loadWorkitems(1, false);
+          },
           disabled: loading || !store.projectID,
           className: "p-1.5 text-slate-500 hover:text-slate-800 disabled:opacity-40 rounded-lg hover:bg-slate-100 transition-colors",
           title: "刷新列表",
@@ -2893,6 +3129,10 @@ const SubmitView = () => {
   const [configError, setConfigError] = reactExports.useState(null);
   const [projectOptions, setProjectOptions] = reactExports.useState([]);
   const [loadingProjects, setLoadingProjects] = reactExports.useState(false);
+  const [projectError, setProjectError] = reactExports.useState(null);
+  const [projectInputMode, setProjectInputMode] = reactExports.useState("select");
+  const [manualProjectInput, setManualProjectInput] = reactExports.useState(store.projectID);
+  const [projectSuccessMsg, setProjectSuccessMsg] = reactExports.useState(null);
   const [memberOptions, setMemberOptions] = reactExports.useState([]);
   const [loadingMembers, setLoadingMembers] = reactExports.useState(false);
   const [userDescription, setUserDescription] = reactExports.useState("");
@@ -2932,60 +3172,72 @@ const SubmitView = () => {
   };
   const loadProjects = async (silent = false) => {
     setLoadingProjects(true);
+    setProjectError(null);
     try {
       const reporter = new YunxiaoBugReporter(store.buildConfigurationForProjectListing());
       const projects = await reporter.listOrganizationProjects();
       setProjectOptions(projects);
-      let targetProjectId = store.projectID;
-      if ((!targetProjectId || !projects.some((p) => p.id === targetProjectId)) && projects.length > 0) {
+      let targetProjectId = store.projectID.trim();
+      if (!targetProjectId && projects.length > 0) {
         targetProjectId = projects[0].id;
         store.setField("projectID", targetProjectId);
+        setManualProjectInput(targetProjectId);
         await store.save();
       }
       if (targetProjectId) {
         loadMembers(targetProjectId);
         loadFields(targetProjectId);
+      } else if (projects.length === 0) {
+        setProjectInputMode("manual");
       }
     } catch (err) {
+      const msg = err.message || "获取项目列表失败";
+      setProjectError(msg);
+      setProjectInputMode("manual");
       if (!silent) console.warn("[SubmitView] 加载项目失败:", err);
     } finally {
       setLoadingProjects(false);
     }
   };
-  const handleProjectChange = (newProjId) => {
-    store.setField("projectID", newProjId);
-    store.save();
-    if (newProjId) {
-      loadMembers(newProjId);
-      loadFields(newProjId);
+  const handleProjectChange = async (newProjId) => {
+    const trimmed = (newProjId || "").trim();
+    store.setField("projectID", trimmed);
+    setManualProjectInput(trimmed);
+    await store.save();
+    if (trimmed) {
+      loadMembers(trimmed);
+      loadFields(trimmed);
+      setProjectSuccessMsg(`已指定项目: ${trimmed}`);
+      setTimeout(() => setProjectSuccessMsg(null), 3e3);
     } else {
       setMemberOptions([]);
       setFieldDefinitions([]);
     }
   };
   const loadMembers = async (overrideProjId) => {
-    const projId = overrideProjId || store.projectID;
-    if (!projId) return;
+    const projId = (overrideProjId || store.projectID || "").trim();
+    if (!projId || projId === "PLACEHOLDER_NOT_USED") return;
     setLoadingMembers(true);
     try {
-      const reporter = new YunxiaoBugReporter(store.buildConfigurationForMemberListing());
+      const reporter = new YunxiaoBugReporter(store.buildConfigurationForMemberListing(projId));
       const members = await reporter.listProjectMembers();
       setMemberOptions(members);
       if (store.assignedTo) {
         const found = members.find((m) => m.id === store.assignedTo);
         if (found) store.setField("assignedToName", found.name);
       }
-    } catch {
+    } catch (err) {
+      console.warn("[SubmitView] 加载项目成员失败:", err);
     } finally {
       setLoadingMembers(false);
     }
   };
   const loadFields = async (overrideProjId) => {
-    const projId = overrideProjId || store.projectID;
-    if (!projId) return;
+    const projId = (overrideProjId || store.projectID || "").trim();
+    if (!projId || projId === "PLACEHOLDER_NOT_USED") return;
     setLoadingFields(true);
     try {
-      const reporter = new YunxiaoBugReporter(store.buildConfiguration());
+      const reporter = new YunxiaoBugReporter(store.buildConfiguration({ projectID: projId }));
       let typeID = store.workitemTypeID;
       if (!typeID) {
         const types = await reporter.listBugTypes();
@@ -3004,7 +3256,8 @@ const SubmitView = () => {
         }
         setCustomFieldValues((prev) => ({ ...defaults, ...prev }));
       }
-    } catch {
+    } catch (err) {
+      console.warn("[SubmitView] 加载字段定义失败:", err);
     } finally {
       setLoadingFields(false);
     }
@@ -3162,17 +3415,17 @@ ${res.expected_result}`);
   const handleSubmit = async () => {
     if (!userDescription.trim()) return;
     if (!store.projectID.trim()) {
-      alert("请选择所属项目后再提交");
+      setSubmitResult({ success: false, message: "请选择或手动输入所属项目 ID 后再提交" });
       return;
     }
     if (!store.assignedTo.trim()) {
-      alert("请选择或填写负责人后再提交");
+      setSubmitResult({ success: false, message: "请选择或填写负责人后再提交" });
       return;
     }
     if (!requiredFieldsFilled) {
       setShowSupplementary(true);
       const missing = requiredListFields.filter((f) => !customFieldValues[f.id]).map((f) => f.name).join("、");
-      alert(`请补充必填字段：${missing}`);
+      setSubmitResult({ success: false, message: `请补充必填字段：${missing}` });
       return;
     }
     setIsSubmitting(true);
@@ -3274,24 +3527,50 @@ ${res.expected_result}`);
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3 space-y-1.5 shadow-xs", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3 space-y-2 shadow-xs", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "font-medium text-slate-700", children: "所属项目 (Project)" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              onClick: () => loadProjects(false),
-              disabled: loadingProjects,
-              className: "text-blue-600 hover:text-blue-700 flex items-center space-x-1 text-[11px] disabled:opacity-40",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 10, className: loadingProjects ? "animate-spin" : "" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "刷新项目" })
-              ]
-            }
-          )
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "font-semibold text-slate-800", children: "所属项目 (Project)" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setProjectInputMode("select"),
+                  className: `px-2 py-0.5 rounded-md font-medium transition-all ${projectInputMode === "select" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-800"}`,
+                  children: "列表选择"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setProjectInputMode("manual"),
+                  className: `px-2 py-0.5 rounded-md font-medium transition-all ${projectInputMode === "manual" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-800"}`,
+                  children: "手动输入"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: () => loadProjects(false),
+                disabled: loadingProjects,
+                className: "text-blue-600 hover:text-blue-700 flex items-center space-x-1 text-[11px] disabled:opacity-40 ml-1",
+                title: "重新拉取组织项目",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 11, className: loadingProjects ? "animate-spin" : "" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "刷新" })
+                ]
+              }
+            )
+          ] })
         ] }),
-        projectOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        projectInputMode === "select" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: loadingProjects ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 text-xs text-slate-400 py-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 12, className: "animate-spin text-blue-500" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "正在获取组织项目列表…" })
+        ] }) : projectOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "select",
           {
             value: store.projectID,
@@ -3299,6 +3578,10 @@ ${res.expected_result}`);
             className: "w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer",
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "-- 请选择所属项目 --" }),
+              store.projectID && !projectOptions.some((p) => p.id === store.projectID) && /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: store.projectID, children: [
+                store.projectID,
+                " (当前手动指定项目)"
+              ] }),
               projectOptions.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: p.id, children: [
                 p.name || p.id,
                 " (",
@@ -3307,10 +3590,63 @@ ${res.expected_result}`);
               ] }, p.id))
             ]
           }
-        ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1.5 text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { size: 14, className: "shrink-0 text-amber-500" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "未获取到组织项目，请检查组织 ID 与 Token 权限" })
-        ] })
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-1.5 text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { size: 14, className: "shrink-0 text-amber-500 mt-0.5" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 text-[11px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-medium", children: projectError ? `获取失败: ${projectError}` : "未在组织下获取到项目" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-600 mt-0.5", children: "可直接切换到「手动输入」填写项目 ID (spaceId)。" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setProjectInputMode("manual"),
+              className: "w-full py-1.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-medium border border-blue-200 transition-colors",
+              children: "切换到手动输入项目 ID"
+            }
+          )
+        ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                placeholder: "输入云效项目 ID / spaceId (如 64bcde...)",
+                value: manualProjectInput,
+                onChange: (e) => setManualProjectInput(e.target.value),
+                onKeyDown: (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleProjectChange(manualProjectInput);
+                  }
+                },
+                className: "flex-1 text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => handleProjectChange(manualProjectInput),
+                className: "px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shrink-0 transition-colors",
+                children: "确定"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-slate-400", children: "💡 项目 ID 可在云效项目页面 URL 中找到（通常为 spaceId 或 identifier）。" })
+        ] }),
+        projectSuccessMsg ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 text-[11px] text-emerald-600 font-medium", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { size: 12 }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: projectSuccessMsg })
+        ] }) : store.projectID ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-[11px] text-slate-500 pt-0.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+            "当前项目: ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-700 font-medium", children: store.projectID })
+          ] }),
+          projectOptions.find((p) => p.id === store.projectID) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400 truncate max-w-[140px]", children: projectOptions.find((p) => p.id === store.projectID)?.name })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-amber-600 font-medium", children: "* 请指定所属项目，以自动拉取项目成员与必填字段" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white rounded-xl border border-slate-200 p-3 space-y-1.5 shadow-xs", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-xs", children: [
@@ -3632,7 +3968,7 @@ ${res.expected_result}`);
       {
         type: "button",
         onClick: handleSubmit,
-        disabled: isSubmitting || !userDescription.trim(),
+        disabled: isSubmitting || !userDescription.trim() || !store.projectID.trim(),
         className: "w-full flex items-center justify-center space-x-2 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-semibold text-xs rounded-xl shadow-sm transition-all",
         children: isSubmitting ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { size: 14, className: "animate-spin" }),

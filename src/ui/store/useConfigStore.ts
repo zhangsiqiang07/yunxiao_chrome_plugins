@@ -34,9 +34,9 @@ export interface ConfigStoreState {
   isConfigured: () => boolean;
   validationErrors: () => string[];
   resolvedToken: () => string;
-  buildConfiguration: () => YXBConfiguration;
-  buildConfigurationForProjectListing: () => YXBConfiguration;
-  buildConfigurationForMemberListing: () => YXBConfiguration;
+  buildConfiguration: (overrides?: Partial<YXBConfiguration>) => YXBConfiguration;
+  buildConfigurationForProjectListing: (overrides?: Partial<YXBConfiguration>) => YXBConfiguration;
+  buildConfigurationForMemberListing: (overrideProjId?: string) => YXBConfiguration;
 }
 
 const STORAGE_KEY = 'com.yunxiao.bugreporter.config.v1';
@@ -131,7 +131,7 @@ export const useConfigStore = create<ConfigStoreState>((set, get) => ({
     return trimmed.length > 0 ? trimmed : state.defaultToken;
   },
 
-  buildConfiguration: () => {
+  buildConfiguration: (overrides?: Partial<YXBConfiguration>) => {
     const state = get();
     const token = state.resolvedToken();
     let cache: YXBCache | undefined;
@@ -139,10 +139,10 @@ export const useConfigStore = create<ConfigStoreState>((set, get) => ({
       cache = state.cacheBackend === 'chromeStorage' ? new YXBChromeStorageCache() : new YXBInMemoryCache();
     }
 
-    return {
-      domain: state.domain,
+    const baseConfig: YXBConfiguration = {
+      domain: state.domain.trim(),
       edition: state.edition,
-      organizationID: state.organizationID,
+      organizationID: state.organizationID.trim(),
       projectID: state.projectID.trim(),
       workitemTypeID: state.workitemTypeID.trim() || undefined,
       assignedTo: state.assignedTo.trim(),
@@ -151,10 +151,12 @@ export const useConfigStore = create<ConfigStoreState>((set, get) => ({
       workitemTypeCacheTTL: state.workitemTypeCacheTTL,
       tokenCacheTTL: state.tokenCacheTTL,
     };
+
+    return { ...baseConfig, ...overrides };
   },
 
-  buildConfigurationForProjectListing: () => {
-    const base = get().buildConfiguration();
+  buildConfigurationForProjectListing: (overrides?: Partial<YXBConfiguration>) => {
+    const base = get().buildConfiguration(overrides);
     return {
       ...base,
       projectID: base.projectID || 'PLACEHOLDER_NOT_USED',
@@ -162,8 +164,8 @@ export const useConfigStore = create<ConfigStoreState>((set, get) => ({
     };
   },
 
-  buildConfigurationForMemberListing: () => {
-    const base = get().buildConfiguration();
+  buildConfigurationForMemberListing: (overrideProjId?: string) => {
+    const base = get().buildConfiguration(overrideProjId ? { projectID: overrideProjId.trim() } : undefined);
     return {
       ...base,
       assignedTo: base.assignedTo || 'PLACEHOLDER_NOT_USED',

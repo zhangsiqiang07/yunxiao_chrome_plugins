@@ -145,6 +145,11 @@ export class YunxiaoBugReporter {
   }
 
   private async performSubmit(report: YXBBugReport, forceRefresh = false): Promise<YXBSubmitResult> {
+    const projId = (this.config?.projectID ?? '').trim();
+    if (!projId || projId === 'PLACEHOLDER_NOT_USED') {
+      throw YXBError.invalidConfiguration('未指定所属项目 ID，请先选择或输入项目 ID');
+    }
+
     const token = await this.fetchToken(forceRefresh);
     const workitemTypeID = await this.resolveWorkitemTypeID(token);
 
@@ -217,9 +222,9 @@ export class YunxiaoBugReporter {
     return this.withRetry(token => this.workitemService!.fetchProjectMembers(token));
   }
 
-  public async listOrganizationProjects(): Promise<YXBProject[]> {
+  public async listOrganizationProjects(keyword?: string): Promise<YXBProject[]> {
     if (!this.workitemService) throw YXBError.notConfigured();
-    return this.withRetry(token => this.workitemService!.fetchOrganizationProjects(token));
+    return this.withRetry(token => this.workitemService!.fetchOrganizationProjects(token, keyword));
   }
 
   public async listWorkitemTypeFields(workitemTypeID: string): Promise<YXBFieldDefinition[]> {

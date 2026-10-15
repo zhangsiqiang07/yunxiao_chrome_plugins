@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, RefreshCw, Flag, User, Clock, AlertCircle } from 'lucide-react';
+import { ChevronDown, RefreshCw, Flag, User, Clock, AlertCircle, Edit2, Check, X } from 'lucide-react';
 import { YunxiaoBugReporter } from '../../core/YunxiaoBugReporter';
 import type { YXBProject, YXBWorkitem } from '../../models/YXBWorkitemModels';
 import { useConfigStore } from '../store/useConfigStore';
@@ -87,29 +87,95 @@ export const BugListView: React.FC = () => {
 
   const currentProjectName = projectOptions.find(p => p.id === store.projectID)?.name || store.projectID || '选择项目';
 
+  const [isEditingProject, setIsEditingProject] = useState(false);
+  const [manualProjectInput, setManualProjectInput] = useState(store.projectID);
+
+  const handleApplyManualProject = () => {
+    const val = manualProjectInput.trim();
+    store.setField('projectID', val);
+    store.save();
+    setIsEditingProject(false);
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
       {/* 顶部栏：切换项目与刷新 */}
       <div className="sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-white border-b border-slate-200">
-        <div className="flex items-center space-x-1.5 flex-1 min-w-0 mr-2">
-          <select
-            value={store.projectID}
-            onChange={(e) => store.setField('projectID', e.target.value)}
-            className="text-xs font-semibold text-slate-800 bg-transparent border-none focus:outline-none truncate cursor-pointer pr-4"
-          >
-            <option value="">选择项目</option>
-            {projectOptions.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name || p.id}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={13} className="text-slate-400 shrink-0 -ml-3 pointer-events-none" />
-        </div>
+        {isEditingProject ? (
+          <div className="flex items-center space-x-1 flex-1 mr-2">
+            <input
+              type="text"
+              placeholder="输入项目 ID"
+              value={manualProjectInput}
+              onChange={(e) => setManualProjectInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleApplyManualProject();
+                if (e.key === 'Escape') setIsEditingProject(false);
+              }}
+              autoFocus
+              className="flex-1 text-xs px-2 py-1 bg-slate-50 border border-slate-300 rounded font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <button
+              type="button"
+              onClick={handleApplyManualProject}
+              className="p-1 text-emerald-600 hover:text-emerald-700"
+              title="确定"
+            >
+              <Check size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditingProject(false)}
+              className="p-1 text-slate-400 hover:text-slate-600"
+              title="取消"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-1.5 flex-1 min-w-0 mr-2">
+            <select
+              value={store.projectID}
+              onChange={(e) => {
+                const val = e.target.value;
+                store.setField('projectID', val);
+                store.save();
+              }}
+              className="text-xs font-semibold text-slate-800 bg-transparent border-none focus:outline-none truncate cursor-pointer pr-4"
+            >
+              <option value="">选择项目</option>
+              {store.projectID && !projectOptions.some(p => p.id === store.projectID) && (
+                <option value={store.projectID}>
+                  {store.projectID} (指定项目)
+                </option>
+              )}
+              {projectOptions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name || p.id}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={13} className="text-slate-400 shrink-0 -ml-3 pointer-events-none" />
+            <button
+              type="button"
+              onClick={() => {
+                setManualProjectInput(store.projectID);
+                setIsEditingProject(true);
+              }}
+              className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
+              title="手动输入项目 ID"
+            >
+              <Edit2 size={12} />
+            </button>
+          </div>
+        )}
 
         <button
           type="button"
-          onClick={() => loadWorkitems(1, false)}
+          onClick={() => {
+            loadProjects();
+            loadWorkitems(1, false);
+          }}
           disabled={loading || !store.projectID}
           className="p-1.5 text-slate-500 hover:text-slate-800 disabled:opacity-40 rounded-lg hover:bg-slate-100 transition-colors"
           title="刷新列表"

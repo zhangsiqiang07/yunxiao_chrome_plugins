@@ -61,6 +61,10 @@ export const SubmitView: React.FC = () => {
   // 2. 项目与成员
   const [projectOptions, setProjectOptions] = useState<YXBProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [projectError, setProjectError] = useState<string | null>(null);
+  const [projectInputMode, setProjectInputMode] = useState<'select' | 'manual'>('select');
+  const [manualProjectInput, setManualProjectInput] = useState(store.projectID);
+  const [projectSuccessMsg, setProjectSuccessMsg] = useState<string | null>(null);
   const [memberOptions, setMemberOptions] = useState<YXBMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
@@ -124,34 +128,49 @@ export const SubmitView: React.FC = () => {
   // 加载组织项目列表
   const loadProjects = async (silent = false) => {
     setLoadingProjects(true);
+    setProjectError(null);
     try {
       const reporter = new YunxiaoBugReporter(store.buildConfigurationForProjectListing());
       const projects = await reporter.listOrganizationProjects();
       setProjectOptions(projects);
-      let targetProjectId = store.projectID;
-      // 默认选中组织内最新建立的项目
-      if ((!targetProjectId || !projects.some(p => p.id === targetProjectId)) && projects.length > 0) {
+      let targetProjectId = store.projectID.trim();
+
+      // 默认选中组织内最新建立的项目（如果尚未设置项目且接口返回了项目）
+      if (!targetProjectId && projects.length > 0) {
         targetProjectId = projects[0].id;
         store.setField('projectID', targetProjectId);
+        setManualProjectInput(targetProjectId);
         await store.save();
       }
+
       if (targetProjectId) {
         loadMembers(targetProjectId);
         loadFields(targetProjectId);
+      } else if (projects.length === 0) {
+        // 如果列表为空，自动切换到手动输入模式
+        setProjectInputMode('manual');
       }
     } catch (err: any) {
+      const msg = err.message || '获取项目列表失败';
+      setProjectError(msg);
+      // 接口失败时自动切换到手动输入模式，允许用户直接指定项目
+      setProjectInputMode('manual');
       if (!silent) console.warn('[SubmitView] 加载项目失败:', err);
     } finally {
       setLoadingProjects(false);
     }
   };
 
-  const handleProjectChange = (newProjId: string) => {
-    store.setField('projectID', newProjId);
-    store.save();
-    if (newProjId) {
-      loadMembers(newProjId);
-      loadFields(newProjId);
+  const handleProjectChange = async (newProjId: string) => {
+    const trimmed = (newProjId || '').trim();
+    store.setField('projectID', trimmed);
+    setManualProjectInput(trimmed);
+    await store.save();
+    if (trimmed) {
+      loadMembers(trimmed);
+      loadFields(trimmed);
+      setProjectSuccessMsg(`已指定项目: ${trimmed}`);
+      setTimeout(() => setProjectSuccessMsg(null), 3000);
     } else {
       setMemberOptions([]);
       setFieldDefinitions([]);
@@ -159,29 +178,30 @@ export const SubmitView: React.FC = () => {
   };
 
   const loadMembers = async (overrideProjId?: string) => {
-    const projId = overrideProjId || store.projectID;
-    if (!projId) return;
+    const projId = (overrideProjId || store.projectID || '').trim();
+    if (!projId || projId === 'PLACEHOLDER_NOT_USED') return;
     setLoadingMembers(true);
     try {
-      const reporter = new YunxiaoBugReporter(store.buildConfigurationForMemberListing());
+      const reporter = new YunxiaoBugReporter(store.buildConfigurationForMemberListing(projId));
       const members = await reporter.listProjectMembers();
       setMemberOptions(members);
       if (store.assignedTo) {
         const found = members.find(m => m.id === store.assignedTo);
         if (found) store.setField('assignedToName', found.name);
       }
-    } catch {}
-    finally {
+    } catch (err) {
+      console.warn('[SubmitView] 加载项目成员失败:', err);
+    } finally {
       setLoadingMembers(false);
     }
   };
 
   const loadFields = async (overrideProjId?: string) => {
-    const projId = overrideProjId || store.projectID;
-    if (!projId) return;
+    const projId = (overrideProjId || store.projectID || '').trim();
+    if (!projId || projId === 'PLACEHOLDER_NOT_USED') return;
     setLoadingFields(true);
     try {
-      const reporter = new YunxiaoBugReporter(store.buildConfiguration());
+      const reporter = new YunxiaoBugReporter(store.buildConfiguration({ projectID: projId }));
       let typeID = store.workitemTypeID;
       if (!typeID) {
         const types = await reporter.listBugTypes();
@@ -201,8 +221,9 @@ export const SubmitView: React.FC = () => {
         }
         setCustomFieldValues(prev => ({ ...defaults, ...prev }));
       }
-    } catch {}
-    finally {
+    } catch (err) {
+      console.warn('[SubmitView] 加载字段定义失败:', err);
+    } finally {
       setLoadingFields(false);
     }
   };
@@ -383,17 +404,17 @@ export const SubmitView: React.FC = () => {
   const handleSubmit = async () => {
     if (!userDescription.trim()) return;
     if (!store.projectID.trim()) {
-      alert('请选择所属项目后再提交');
+      setSubmitResult({ success: false, message: '请选择或手动输入所属项目 ID 后再提交' });
       return;
     }
     if (!store.assignedTo.trim()) {
-      alert('请选择或填写负责人后再提交');
+      setSubmitResult({ success: false, message: '请选择或填写负责人后再提交' });
       return;
     }
     if (!requiredFieldsFilled) {
       setShowSupplementary(true);
       const missing = requiredListFields.filter(f => !customFieldValues[f.id]).map(f => f.name).join('、');
-      alert(`请补充必填字段：${missing}`);
+      setSubmitResult({ success: false, message: `请补充必填字段：${missing}` });
       return;
     }
 
@@ -519,36 +540,141 @@ export const SubmitView: React.FC = () => {
 
       <div className="p-3 space-y-3">
         {/* 1. 所属项目 */}
-        <div className="bg-white rounded-xl border border-slate-200 p-3 space-y-1.5 shadow-xs">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 space-y-2 shadow-xs">
           <div className="flex items-center justify-between text-xs">
-            <label className="font-medium text-slate-700">所属项目 (Project)</label>
-            <button
-              type="button"
-              onClick={() => loadProjects(false)}
-              disabled={loadingProjects}
-              className="text-blue-600 hover:text-blue-700 flex items-center space-x-1 text-[11px] disabled:opacity-40"
-            >
-              <RefreshCw size={10} className={loadingProjects ? 'animate-spin' : ''} />
-              <span>刷新项目</span>
-            </button>
+            <label className="font-semibold text-slate-800">所属项目 (Project)</label>
+            <div className="flex items-center space-x-1">
+              <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setProjectInputMode('select')}
+                  className={`px-2 py-0.5 rounded-md font-medium transition-all ${
+                    projectInputMode === 'select'
+                      ? 'bg-white text-blue-600 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  列表选择
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProjectInputMode('manual')}
+                  className={`px-2 py-0.5 rounded-md font-medium transition-all ${
+                    projectInputMode === 'manual'
+                      ? 'bg-white text-blue-600 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  手动输入
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => loadProjects(false)}
+                disabled={loadingProjects}
+                className="text-blue-600 hover:text-blue-700 flex items-center space-x-1 text-[11px] disabled:opacity-40 ml-1"
+                title="重新拉取组织项目"
+              >
+                <RefreshCw size={11} className={loadingProjects ? 'animate-spin' : ''} />
+                <span>刷新</span>
+              </button>
+            </div>
           </div>
-          {projectOptions.length > 0 ? (
-            <select
-              value={store.projectID}
-              onChange={(e) => handleProjectChange(e.target.value)}
-              className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-            >
-              <option value="">-- 请选择所属项目 --</option>
-              {projectOptions.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name || p.id} ({p.id})
-                </option>
-              ))}
-            </select>
+
+          {projectInputMode === 'select' ? (
+            <div>
+              {loadingProjects ? (
+                <div className="flex items-center space-x-2 text-xs text-slate-400 py-2">
+                  <RefreshCw size={12} className="animate-spin text-blue-500" />
+                  <span>正在获取组织项目列表…</span>
+                </div>
+              ) : projectOptions.length > 0 ? (
+                <select
+                  value={store.projectID}
+                  onChange={(e) => handleProjectChange(e.target.value)}
+                  className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="">-- 请选择所属项目 --</option>
+                  {store.projectID && !projectOptions.some(p => p.id === store.projectID) && (
+                    <option value={store.projectID}>
+                      {store.projectID} (当前手动指定项目)
+                    </option>
+                  )}
+                  {projectOptions.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name || p.id} ({p.id})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-start space-x-1.5 text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                    <AlertTriangle size={14} className="shrink-0 text-amber-500 mt-0.5" />
+                    <div className="flex-1 text-[11px]">
+                      <p className="font-medium">{projectError ? `获取失败: ${projectError}` : '未在组织下获取到项目'}</p>
+                      <p className="text-amber-600 mt-0.5">可直接切换到「手动输入」填写项目 ID (spaceId)。</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setProjectInputMode('manual')}
+                    className="w-full py-1.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-medium border border-blue-200 transition-colors"
+                  >
+                    切换到手动输入项目 ID
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
-            <div className="flex items-center space-x-1.5 text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
-              <AlertTriangle size={14} className="shrink-0 text-amber-500" />
-              <span>未获取到组织项目，请检查组织 ID 与 Token 权限</span>
+            <div className="space-y-1.5">
+              <div className="flex space-x-1.5">
+                <input
+                  type="text"
+                  placeholder="输入云效项目 ID / spaceId (如 64bcde...)"
+                  value={manualProjectInput}
+                  onChange={(e) => setManualProjectInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleProjectChange(manualProjectInput);
+                    }
+                  }}
+                  className="flex-1 text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleProjectChange(manualProjectInput)}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shrink-0 transition-colors"
+                >
+                  确定
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                💡 项目 ID 可在云效项目页面 URL 中找到（通常为 spaceId 或 identifier）。
+              </p>
+            </div>
+          )}
+
+          {/* 生效提示或当前状态 */}
+          {projectSuccessMsg ? (
+            <div className="flex items-center space-x-1 text-[11px] text-emerald-600 font-medium">
+              <CheckCircle2 size={12} />
+              <span>{projectSuccessMsg}</span>
+            </div>
+          ) : store.projectID ? (
+            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+              <span className="truncate">
+                当前项目: <span className="font-mono text-slate-700 font-medium">{store.projectID}</span>
+              </span>
+              {projectOptions.find(p => p.id === store.projectID) && (
+                <span className="text-slate-400 truncate max-w-[140px]">
+                  {projectOptions.find(p => p.id === store.projectID)?.name}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="text-[11px] text-amber-600 font-medium">
+              * 请指定所属项目，以自动拉取项目成员与必填字段
             </div>
           )}
         </div>
@@ -861,7 +987,7 @@ export const SubmitView: React.FC = () => {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={isSubmitting || !userDescription.trim()}
+          disabled={isSubmitting || !userDescription.trim() || !store.projectID.trim()}
           className="w-full flex items-center justify-center space-x-2 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-semibold text-xs rounded-xl shadow-sm transition-all"
         >
           {isSubmitting ? (

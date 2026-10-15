@@ -18,17 +18,23 @@ export interface YXBProject {
   id: string;
   name: string;
   createdAt?: number; // 毫秒时间戳
+  customCode?: string;
+  logicalStatus?: string;
 }
 
 /** 当前 Token 对应用户 */
 export interface YXBCurrentUser {
   id: string;
   name: string;
+  username?: string;
   aliyunPk?: string;
 }
 
 export function tokenUserDescription(u: YXBCurrentUser): string {
-  return u.name || u.id;
+  if (u.name && u.username && u.name !== u.username) {
+    return `${u.name}（${u.username}）`;
+  }
+  return u.name || u.username || u.id;
 }
 
 /** 工作项 */
