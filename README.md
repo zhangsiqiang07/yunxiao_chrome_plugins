@@ -36,12 +36,32 @@
 
 ## 🚀 安装与加载方式
 
-1. 打开 Chrome 浏览器，访问 `chrome://extensions/`；
-2. 在右上角开启 **「开发者模式」 (Developer mode)**；
-3. 点击左上角的 **「加载已解压的扩展程序」 (Load unpacked)**；
-4. 选择当前项目的 `dist/` 目录：
-   `/Users/dimoo/Desktop/demo/yunxiao_chrome_plugins/dist`
-5. 扩展安装完成后，点击浏览器右上角的拼图图标将「云效 Bug 上报助手」固定到工具栏。
+### 方式一：下载 GitHub 自动构建产物（推荐）
+
+无需本地配置 Node.js 环境，直接下载构建好的扩展压缩包即可使用：
+
+1. 前往本仓库的 [Releases 页面](https://github.com/zhangsiqiang07/yunxiao_chrome_plugins/releases) 下载最新版本的 **`yunxiao-bug-reporter-chrome.zip`**（包含正式版 Tag 与 `Latest Build` 预发布版；也可在 [Actions 页面](https://github.com/zhangsiqiang07/yunxiao_chrome_plugins/actions) 的最近一次成功构建中下载 Artifact）；
+2. 将压缩包解压到一个**不会被轻易移动或删除**的本地文件夹（确保文件夹内直接包含 `manifest.json` 等文件）；
+3. 打开 Chrome 浏览器，在地址栏访问 `chrome://extensions/`；
+4. 在右上角开启 **「开发者模式」 (Developer mode)**；
+5. 点击左上角的 **「加载已解压的扩展程序」 (Load unpacked)**，选择刚才解压出来的文件夹；
+6. 扩展安装完成后，点击浏览器右上角的拼图图标，将 **「云效 Bug 上报助手」** 固定到工具栏即可使用。
+
+> 💡 **后续更新**：下载新版 `yunxiao-bug-reporter-chrome.zip` 解压覆盖原文件夹，然后在 `chrome://extensions/` 页面点击该扩展卡片上的 **刷新** 按钮即可完成更新。
+
+### 方式二：从源码本地构建安装
+
+如果你需要二次开发或自行打包：
+
+```bash
+git clone [https://github.com/zhangsiqiang07/yunxiao_chrome_plugins.git](https://github.com/zhangsiqiang07/yunxiao_chrome_plugins.git)
+cd yunxiao_chrome_plugins
+
+# 安装依赖
+npm install
+
+# 生产构建（输出至 dist/ 目录）
+npm run build
 
 ---
 
